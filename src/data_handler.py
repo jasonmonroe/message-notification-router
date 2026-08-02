@@ -40,13 +40,11 @@ class DataHandler:
         self.user_business_history = None
         self.users = None
         self.voice_notes = None
-        self.audios = []
-        self.images = []
 
         self._load_text()
 
         # Media
-        #self.audios = self._load_audio()
+        self.audios = self._load_audio()
         self.images = self._load_images()
 
     def _load_text(self) -> None:
@@ -59,54 +57,51 @@ class DataHandler:
 
         # Supporting Text files (non-messages)
         for csv_name in CSV_FILENAMES:
-            if csv_name not in ["messages", "output"]:
-                setattr(self, csv_name, pd.read_csv(os.path.join(DATASET_DIR, f"{csv_name}.csv")))
+            if csv_name in ["messages", "output"]:
+                continue
+
+            setattr(self, csv_name, pd.read_csv(os.path.join(DATASET_DIR, f"{csv_name}.csv")))
+            
 
     def _load_audio(self) -> list:
         # https://lr.org/doc/latest/index.html
         # https://www.comet.com/site/blog/working-with-audio-data-for-machine-learning-in-python/
-
+        
         print("Loading audio files...")
 
         if not os.path.exists(AUDIO_DIR):
             print(f"\n🚨 Error: Directory not found -> {AUDIO_DIR} 🚨.")
-            return [] 
+            return []
 
         audio_files = []
-        for audio_filename in os.listdir(AUDIO_DIR):
+        for idx, audio_filename in enumerate(os.listdir(AUDIO_DIR)):
             audio_filepath = os.path.join(AUDIO_DIR, audio_filename)
             
             if not os.path.isfile(audio_filepath):
                 continue
                 
-            # Unpack the tuple properly (array data, sample rate)
+            print(f"\n🔈 Audio File {idx}")
+            print(f"ℹ️ Filename: {audio_filename}")
+            
+            # Load the raw waveform array and sampling rate
             audio_data, sr = lr.load(audio_filepath, sr=AUDIO_SAMPLE_RATE)
-            audio_files.append(audio_data) # Only append the data array
+            print(f"ℹ️ Shape: {audio_data.shape}")
+            
+            # Calculate duration using the loaded array data
+            duration = lr.get_duration(y=audio_data, sr=sr)
+            print(f"ℹ️ Duration: {duration:.2f} seconds")
+            
+            # Use TinyTag on the file path to extract metadata tags securely
+            try:
+                audio_tag = TinyTag.get(audio_filepath)
+                print(f"ℹ️ Title: {audio_tag.title or 'Unknown'}")
+            except Exception:
+                print("ℹ️ Title: Could not read metadata")
+
+            audio_files.append(audio_data)
             
         return audio_files
 
-    def describe_audio(self) -> None:
-        if not self.audios:
-            print("\n⚠️ Warning: No audio files loaded...")
-            return
-            
-        print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
-        print(f"ℹ️  Audio File Count: {len(self.audios)}")
-        
-        #audio_filenames = os.listdir(AUDIO_DIR)
-        #print(f"audio_files={audio_filenames}")
-        
-        for idx, audio in enumerate(self.audios):
-            #audio_filename = audio_filenames[idx]
-            #audio_filepath = os.path.join(AUDIO_DIR, audio_filename) # Get full path for TinyTag
-            #audio_name, _ = os.path.splitext(audio_filename)
-            audio_tag = TinyTag.get(audio_filepath)
-            
-            print(f"\n🔈 Audio File {idx}")
-            print(f"\tℹ️ Filename: {audio_name}")
-            print(f"\tℹ️ Shape: {audio.shape}") # Works now because audio is an array
-            print(f"\tℹ️ Duration: {lr.get_duration(y=audio, sr=AUDIO_SAMPLE_RATE):.2f} seconds")
-            print(f"\tℹ️ Title: {audio_tag.title}")
 
 
     def _load_images(self) -> list:
@@ -135,6 +130,29 @@ class DataHandler:
                 
         return images
 
+
+    def describe_audio(self) -> None:
+        if not self.audios:
+            print("\n⚠️ Warning: No audio files loaded...")
+            return
+            
+        print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
+        print(f"ℹ️  Audio File Count: {len(self.audios)}")
+        
+        audio_filenames = os.listdir(AUDIO_DIR)
+        print(f"audio_files={audio_filenames}")
+        
+        for idx, audio in enumerate(self.audios):
+            audio_filename = audio_filenames[idx]
+            audio_filepath = os.path.join(AUDIO_DIR, audio_filename) # Get full path for TinyTag
+            audio_name, _ = os.path.splitext(audio_filename)
+            audio_tag = TinyTag.get(audio_filepath)
+            
+            print(f"\n🔈 Audio File {idx}")
+            print(f"\tℹ️ Filename: {audio_name}")
+            print(f"\tℹ️ Shape: {audio.shape}") # Works now because audio is an array
+            print(f"\tℹ️ Duration: {lr.get_duration(y=audio, sr=AUDIO_SAMPLE_RATE):.2f} seconds")
+            print(f"\tℹ️ Title: {audio_tag.title}")
                
     def describe_images(self) -> None:
 
@@ -152,14 +170,13 @@ class DataHandler:
 
             print(f"\n🏞️ Image {idx}")
             print(f"\tℹ️ Filename: {image_filename}")
+            
 
             height, width, channels = image.shape
             print(f"\tℹ️ Height: {height}, Width: {width}, Channels: {channels}")
     
-            #cv2.imshow(image_filename, image)
-            #cv2.waitKey(0)
-            #cv2.destroyAllWindows()
-        return None
+            cv2.imshow(image_filename, image)
+
 
     def describe(self) -> None:
         sample_text = "Sample" if self._use_sample else ""
@@ -197,6 +214,6 @@ class DataHandler:
         num_dup_values = self.messages.duplicated().sum()
         print(f"Number of duplicate values: {num_dup_values}")
 
-        #self.describe_audio()
-        #self.describe_images()
+        self.describe_audio()
+        self.describe_images()
         
