@@ -9,7 +9,7 @@ from src.data_handler import DataHandler
 def run_data_pipeline(args: list):
     
     data_handler = DataHandler(args)
-    data_handler.describe()
+    #data_handler.describe()
 
     return data_handler.messages
 
