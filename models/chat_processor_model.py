@@ -13,15 +13,16 @@ from src.utils import show_banner
 
 class ChatProcessorModel:
     def __init__(self, dataset:dict):
-        self.name = "WhatsApp Processing Model"
+        self.name = "WhatsApp Chat Processing Model"
         
         self._client = self._load_model(dataset.get("row_total", 0))
 
-    def _load_model(self, row_total:int):
-        if MODEL_API_URL is None or MODEL_NAME is None or MODEL_API_KEY is None:
-            print("⚠️ Credentials aren't properly being read. Check .env file. ⚠️")
-            return None
+    def _load_model(self, row_total:int) -> OpenAI:
 
+        if MODEL_API_URL is None or MODEL_NAME is None or MODEL_API_KEY is None:
+            ValueError("🚨 Credentials aren't properly being read. Check .env file. 🚨")
+            return None
+             
         subtitles = [
             f"🤖MODEL_NAME: {MODEL_NAME}",
             f"🌐️MODEL_API_URL: {MODEL_API_URL}",

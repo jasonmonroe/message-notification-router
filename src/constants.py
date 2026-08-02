@@ -7,7 +7,6 @@ import os
 # +-----------------------------------+
 
 ARGS_LIST = [
-    "--build",
     "--log",
     "--sample",
 ]
@@ -24,9 +23,24 @@ MSEC = 1000
 PEP8_LINE_LEN = 79
 
 # Dataset files
-DATASET_DIR = "../dataset/"
-AUDIO_DIR = f"{DATASET_DIR}media/audio/"
-IMAGES_DIR = f"{DATASET_DIR}media/images/"
+CSV_FILENAMES = [
+    "business_accounts",
+    "daily_notification_summary",
+    "group_members",
+    "groups",
+    "images",
+    "message_events",
+    "message_history",
+    "messages",
+    #"output",
+    "user_business_history",
+    "users",
+    "voice_notes"
+]
+
+DATASET_DIR = "dataset/"
+AUDIO_DIR = os.path.join(DATASET_DIR, "media", "audio")
+IMAGES_DIR = os.path.join(DATASET_DIR, "media", "images")
 
 AUDIO_SAMPLE_RATE = None
 
@@ -35,6 +49,6 @@ OUTPUT_FILE = "output.csv"
 
 # Model Information
 APP_NAME = os.getenv("APP_NAME")
-MODEL_API_URL = os.getenv("MODEL_API_URL")
 MODEL_API_KEY = os.getenv("MODEL_API_KEY")
+MODEL_API_URL = os.getenv("MODEL_API_URL")
 MODEL_NAME = os.getenv("MODEL_NAME")

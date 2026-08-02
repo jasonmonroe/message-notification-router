@@ -1,10 +1,10 @@
 # requirements.txt
 
-cv2
+dotenv
 librosa
- 
 numpy
 openai
+opencv-python
 pandas
 python-dotenv
 tinytag

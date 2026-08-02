@@ -9,6 +9,7 @@ from src.data_handler import DataHandler
 def run_data_pipeline(args: list):
     
     data_handler = DataHandler(args)
+    data_handler.describe()
 
     return data_handler.messages
 
@@ -18,8 +19,11 @@ def run_message_reviewer_pipeline(messages):
 
     output = ""
 
-    dataset = {}
-    chat_model = ChatProcessorModel(dataset)
+    dataset = {
+        "row_total": messages.shape[1]
+    }
+    
+    #chat_model = ChatProcessorModel(dataset)
     for message in messages:
         pass
 

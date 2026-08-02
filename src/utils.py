@@ -16,7 +16,8 @@ import uuid
 from src.constants import (
     MSEC,
     SECS_IN_MIN,
-    PEP8_LINE_LEN, CHAT_TRANSCRIPT_FILE
+    PEP8_LINE_LEN, 
+    CHAT_TRANSCRIPT_FILE
 )
 
 def gen_run_id() -> str:
