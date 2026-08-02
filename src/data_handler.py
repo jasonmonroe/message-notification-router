@@ -41,13 +41,13 @@ class DataHandler:
         self.users = None
         self.voice_notes = None
 
-        self._load_text()
+        self._load()
 
         # Media
-        self.audios = self._load_audio()
-        self.images = self._load_images()
+        #self.audios = self._load_audio()
+        #self.images = self._load_images()
 
-    def _load_text(self) -> None:
+    def _load(self) -> None:
         print("Loading text files...")
         
         # Text
@@ -61,9 +61,8 @@ class DataHandler:
                 continue
 
             setattr(self, csv_name, pd.read_csv(os.path.join(DATASET_DIR, f"{csv_name}.csv")))
-            
 
-    def _load_audio(self) -> list:
+    def _get_audio(self) -> list:
         # https://lr.org/doc/latest/index.html
         # https://www.comet.com/site/blog/working-with-audio-data-for-machine-learning-in-python/
         
@@ -81,30 +80,42 @@ class DataHandler:
                 continue
                 
             print(f"\n🔈 Audio File {idx}")
-            print(f"ℹ️ Filename: {audio_filename}")
+
+            #print(f"ℹ️ Filename: {audio_filename}")
             
             # Load the raw waveform array and sampling rate
             audio_data, sr = lr.load(audio_filepath, sr=AUDIO_SAMPLE_RATE)
-            print(f"ℹ️ Shape: {audio_data.shape}")
+            #print(f"ℹ️ Shape: {audio_data.shape}")
             
             # Calculate duration using the loaded array data
             duration = lr.get_duration(y=audio_data, sr=sr)
-            print(f"ℹ️ Duration: {duration:.2f} seconds")
-            
+            #print(f"ℹ️ Duration: {duration:.2f} seconds")
+
+            audio_dataset = {
+                "filename": audio_filename,
+                "filepath": audio_filepath,
+                "data": audio_data,
+                "duration": duration,
+                "shape": audio_data.shape
+            }
+
             # Use TinyTag on the file path to extract metadata tags securely
             try:
                 audio_tag = TinyTag.get(audio_filepath)
-                print(f"ℹ️ Title: {audio_tag.title or 'Unknown'}")
+                audio_dataset["title"] = audio_tag.title or "Unknown"
+                #for key, value in audio_dataset:
+                #    print(f"ℹ️ {key.title()}: {value}")
+
             except Exception:
                 print("ℹ️ Title: Could not read metadata")
 
-            audio_files.append(audio_data)
+            audio_files.append(audio_dataset)
             
         return audio_files
 
 
 
-    def _load_images(self) -> list:
+    def _get_images(self) -> list:
         print("Loading images...")
 
         if not os.path.exists(IMAGES_DIR):
@@ -114,17 +125,24 @@ class DataHandler:
         images = []
         for image_filename in os.listdir(IMAGES_DIR):
             image_filepath = os.path.join(IMAGES_DIR, image_filename)
+
+            image_dataset = {
+                "filename": image_filename,
+                "filepath": image_filepath,
+            }
             
             # Skip directories if any accidentally exist inside the folder
             if not os.path.isfile(image_filepath):
                 continue
             
             # Read the image
-            img_array = cv2.imread(image_filepath)
+            img_data = cv2.imread(image_filepath)
             
             # Verify OpenCV actually read the file successfully
-            if img_array is not None:
-                images.append(img_array)
+            if img_data is not None:
+                image_dataset["data"] = img_data
+
+                images.append(img_data)
             else:
                 print(f"⚠️ Warning: Failed to load image at {image_filepath}")
                 
@@ -143,16 +161,20 @@ class DataHandler:
         print(f"audio_files={audio_filenames}")
         
         for idx, audio in enumerate(self.audios):
-            audio_filename = audio_filenames[idx]
-            audio_filepath = os.path.join(AUDIO_DIR, audio_filename) # Get full path for TinyTag
-            audio_name, _ = os.path.splitext(audio_filename)
-            audio_tag = TinyTag.get(audio_filepath)
+            #audio_filename = audio_filenames[idx]
+            #audio_filepath = os.path.join(AUDIO_DIR, audio_filename) # Get full path for TinyTag
+            #audio_name, _ = os.path.splitext(audio_filename)
+            #audio_tag = TinyTag.get(audio_filepath)
             
             print(f"\n🔈 Audio File {idx}")
-            print(f"\tℹ️ Filename: {audio_name}")
-            print(f"\tℹ️ Shape: {audio.shape}") # Works now because audio is an array
-            print(f"\tℹ️ Duration: {lr.get_duration(y=audio, sr=AUDIO_SAMPLE_RATE):.2f} seconds")
-            print(f"\tℹ️ Title: {audio_tag.title}")
+
+            for key, value in audio:
+                print(f"ℹ️ {key.title()}: {value}")
+
+            #print(f"\tℹ️ Filename: {audio_name}")
+            #print(f"\tℹ️ Shape: {audio.shape}") # Works now because audio is an array
+            #print(f"\tℹ️ Duration: {lr.get_duration(y=audio, sr=AUDIO_SAMPLE_RATE):.2f} seconds")
+            #print(f"\tℹ️ Title: {audio_tag.title}")
                
     def describe_images(self) -> None:
 

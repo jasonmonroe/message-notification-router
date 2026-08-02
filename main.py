@@ -32,10 +32,10 @@ def run_main_pipeline(args: list):
 
     show_banner("Message Notification Router")
     
-    messages = run_data_pipeline(args)
+    data_handler = run_data_pipeline(args)
 
     # Message Reviewer
-    output = run_message_reviewer_pipeline(messages)
+    output = run_message_reviewer_pipeline(data_handler)
 
 
     # should interrupt now?
