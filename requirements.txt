@@ -1,0 +1,10 @@
+# requirements.txt
+
+cv2
+librosa
+ 
+numpy
+openai
+pandas
+python-dotenv
+tinytag
