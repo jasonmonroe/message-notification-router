@@ -63,9 +63,9 @@ def run_message_reviewer_pipeline(data_handler):
 
     for row in messages_df.itertuples():
 
-        print(f"Index: {row.Index} | User ID:  {row.user_id} | MSG ID: {row.message_id} | Media Type: {row.media_type} | Msg TXT: {row.message_text}")
-        
-        print("\n")
+        #print(f"Index: {row.Index} | User ID:  {row.user_id} | MSG ID: {row.message_id} | Media Type: {row.media_type} | Media ID: {row.media_id} | Msg Txt: {row.message_text}")
+        #print("\n")
+
         # Ingestion and Context
         # The Ingestion & Context Pipeline: For each row in messages.csv, aggregate the corresponding user 
         # preferences (users.csv), group role (group_members.csv), business status (business_accounts.csv), 
@@ -73,8 +73,8 @@ def run_message_reviewer_pipeline(data_handler):
         dataset = assembler.build_prompt_by_user(row)
 
         print(f"message_prompt={dataset["prompt"]}")
-        #response = chat_model.get_response(dataset["prompt"])
-        #print(f"response = {response}")
+        response = chat_model.get_response(dataset["prompt"])
+        print(f"response = {response}")
 
 
         # Formulate output

@@ -199,13 +199,11 @@ class DataHandler:
     
             cv2.imshow(image_filename, image)
 
-
     def describe(self) -> None:
         sample_text = "Sample" if self._use_sample else ""
 
         if self.messages.empty:
-            ValueError(f"\n🚨 No {sample_text} messages loaded...")
-            return None
+            raise ValueError(f"\n🚨 No {sample_text} messages loaded...")
         
         print("\n# --- 🗒️ Describe Text Data 🗒️ --- #")
         print(f"💬 {sample_text} Message Information")
