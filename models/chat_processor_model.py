@@ -102,11 +102,11 @@ class ChatProcessorModel:
 
         except (AttributeError, IndexError, json.JSONDecodeError) as e:
             print(f"❌ Error occurred while parsing response: {e}")
-            print(f"Raw model response was: {repr(content_str)}")
+            print(f" `repr(content_str)` was: {repr(content_str)}")
             return {}
 
 
-
+    # @TODO - old version. safe to delete
     def _filter_response1(self, response: ChatCompletion) -> dict:
         try:
             choice = response.choices[0]

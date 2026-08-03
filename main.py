@@ -23,27 +23,25 @@ import warnings
 
 # Local Libraries
 from evaluation.main import run_data_pipeline, run_message_reviewer_pipeline
-from src.constants import ARGS_LIST
+from src.constants import APP_NAME, ARGS_LIST
 from src.utils import gen_run_id, show_banner, show_timer, start_timer
 
  
 def run_main_pipeline(args: list):
     print(f"args={args}")
 
-    show_banner("Message Notification Router")
+    show_banner(f"{APP_NAME}")
+
+
     
     data_handler = run_data_pipeline(args)
 
     # Message Reviewer
-    output = run_message_reviewer_pipeline(data_handler)
+    output_rows = run_message_reviewer_pipeline(data_handler)
 
+    sys.exit(0)
+    data_handler.save_output(output_rows)
 
-    # should interrupt now?
-
-    # whether the message can be batched into a digest,
-
-    # whether it should be muted.
-    
 
 
 def parse_args(command_line_args: list[str]) -> dict:
@@ -58,9 +56,9 @@ if __name__ == "__main__":
     print(f"\n----- 🖨️️ START RUN ID: {run_id} 🖨️️ -----")
   
     args = parse_args(sys.argv[1:])
+
+    # Start Chat Transcript Logging
     run_main_pipeline(args)
 
     show_timer(prog_start_time)
     print(f"\n----- 🖨️️ END RUN ID: {run_id} 🖨️️ -----\n")
-else:
-    print("ERROR LINE 64")

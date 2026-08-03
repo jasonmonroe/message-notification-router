@@ -157,6 +157,12 @@ class ContextAssembler:
         """.strip()
             
     def build_prompt_by_user(self, message_row: pd.DataFrame) -> dict:
+        """
+        Ingestion and Context
+        The Ingestion & Context Pipeline: For each row in messages.csv, aggregate the corresponding user 
+        preferences (users.csv), group role (group_members.csv), business status (business_accounts.csv), 
+        and past chat history (message_history.csv) into a single structured context payload.
+        """
         self._row = message_row
         self._business_id = self._row.business_id
 
