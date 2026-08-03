@@ -68,12 +68,7 @@ SYSTEM_INSTRUCTIONS = (
 ).strip()
 
 
-SYSTEM_PROMPT = """
-You are an automated message router tasked with prioritizing message notificications.  Analyze the user details, text metadata, and incoming media files to generate routing decisions.
-
-
-""".strip()
-
+# src/constants.py
 
 ROUTING_PROMPT_TEMPLATE = """
 ## INCOMING MESSAGE TO ROUTE
@@ -82,14 +77,19 @@ ROUTING_PROMPT_TEMPLATE = """
 
 ## RECIPIENT USER CONTEXT (User ID: {user_id})
 {recipient_user_context}
----
+-----------------------------------------------
 
 ## BUSINESS SENDER CONTEXT (Business ID: {business_id})
 {business_sender_context}
----
+-----------------------------------------------
 
 ## RECENT HISTORICAL EVIDENCE (Optional)
 {historical_evidence}
+-----------------------------------------------
+
+## GROUP METADATA CONTEXT (Group ID: {group_id})
+{group_metadata_context}
+-----------------------------------------------
 
 ## TASK INSTRUCTION
 Analyze the incoming message, user preferences, sender verification, and history. Decide whether this message should be:
@@ -104,58 +104,6 @@ Return your response as a valid JSON object wrapped inside a markdown code block
   "message_type": "...",
   "reason": "...",
   "confidence": 0.95,
-  "evidence_message_ids": "none"
+  "evidence_message_ids": ["..."]
 }}
-""".strip()
-
-
-
-# Example
-MESSAGE_CONTENT_PROMPT = """
-## INCOMING MESSAGE TO ROUTE
-{}
-- Message ID: msg_023
-- Conversation Type: business
-- Sender / Business ID: business_002
-- Target User ID: u_023
-- Created At: 2026-07-30 22:19
-- Message Text: Important Information\n\nDear Customer,\n\nYour latest account or card payment update is now available.\n\nPlease review the details and next steps in your banking app.\n\nTeam Banking Services
-- Forwarded Count: 0
-
----
-
-## RECIPIENT USER CONTEXT (User ID: u_023)
-- Do Not Disturb Window: 21:30-07:30
-- 30-Day Activity: 74 opened, 18 replied, 31 dismissed, 1 reported
-
----
-
-## BUSINESS SENDER CONTEXT (Business ID: business_002)
-- Brand Name: [Look up from business_accounts.csv]
-- Verified Status: [Look up from business_accounts.csv]
-- User Business History: [Look up recent interactions from user_business_history.csv for u_023 & business_002]
-
----
-
-## RECENT HISTORICAL EVIDENCE (Optional)
-- Past similar messages received by this user and how they reacted (from message_history.csv & message_events.csv).
-
----
-
-## TASK INSTRUCTION
-Analyze the incoming message, user preferences, sender verification, and history. Decide whether this message should be:
-1. `notify` (interrupt now)
-2. `digest` (save for later)
-3. `mute` (suppress as low-value, repetitive, or unsafe)
-
-Return your response in strict JSON matching the required output schema:
-{
-  "message_id": "msg_023",
-  "action": "...",
-  "message_type": "...",
-  "reason": "...",
-  "confidence": 0.95,
-  "evidence_message_ids": "none"
-}
-
 """.strip()

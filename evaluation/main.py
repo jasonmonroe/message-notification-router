@@ -57,6 +57,7 @@ def run_message_reviewer_pipeline(data_handler):
     })
     """
 
+    import sys
 
     assembler = ContextAssembler(data_handler)
 
@@ -64,15 +65,15 @@ def run_message_reviewer_pipeline(data_handler):
 
         print(f"Index: {row.Index} | User ID:  {row.user_id} | MSG ID: {row.message_id} | Media Type: {row.media_type} | Msg TXT: {row.message_text}")
         
-
+        print("\n")
         # Ingestion and Context
         # The Ingestion & Context Pipeline: For each row in messages.csv, aggregate the corresponding user 
         # preferences (users.csv), group role (group_members.csv), business status (business_accounts.csv), 
         # and past chat history (message_history.csv) into a single structured context payload.
-        message_prompt = assembler.build_by_user(row)
+        dataset = assembler.build_prompt_by_user(row)
 
-        print(message_prompt)
-        #response = chat_model.get_response(message_prompt)
+        print(f"message_prompt={dataset["prompt"]}")
+        #response = chat_model.get_response(dataset["prompt"])
         #print(f"response = {response}")
 
 
@@ -81,7 +82,7 @@ def run_message_reviewer_pipeline(data_handler):
 
         #prompt = assembler.create_content(user_dataset)
 
-
+        sys.exit(0)
         
         if row.Index > 0:
             print(f"row.index = {row.Index}")
