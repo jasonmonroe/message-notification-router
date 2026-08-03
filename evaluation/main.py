@@ -33,11 +33,9 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
         # @TODO - only test one particular row
         if row.Index == 21:
             
-            dataset = assembler.build_prompt_by_user(row)
-            #print(f"message_prompt={dataset["prompt"]}")
-            response = chat_model.get_response(dataset["prompt"])
+            prompt = assembler.build_prompt_by_user(row)
+            response = chat_model.get_response(prompt)
             output.append(response)
-            #print(f"response = {response}")
 
             # Convert LLM response into the proper output to save to CSV file
             data_handler.save_output(response)
@@ -46,7 +44,4 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     # List of output rows that need to be formatted
     return output
-
     
-
-        

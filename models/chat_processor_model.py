@@ -22,7 +22,6 @@ from src.utils import show_banner
 class ChatProcessorModel:
     def __init__(self, dataset: dict):
         self.name = "WhatsApp Chat Processing Model"
-        
         self._client = self._load_model(dataset.get("row_total", 0))
 
     def _load_model(self, row_total:int) -> OpenAI:
@@ -32,7 +31,7 @@ class ChatProcessorModel:
         subtitles = [
             f"🤖MODEL_NAME: {MODEL_NAME}",
             f"🌐️MODEL_API_URL: {MODEL_API_URL}",
-            f"📄️CVS ROWS: {row_total}"
+            f"📄️DATA ROWS: {row_total}"
         ]
 
         show_banner(self.name.upper(), subtitles)
@@ -45,8 +44,13 @@ class ChatProcessorModel:
         )
 
     def get_response(self, prompt: str) -> dict:
-        # https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create
-        
+        """
+        Calls OpenAI model with instructions and prompt context and waits for a response.  The response is then
+        filtered and returned in a specific format for output.
+
+        https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create
+        """
+       
         response = self._client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
@@ -60,8 +64,6 @@ class ChatProcessorModel:
             timeout=90.0
         )
 
-        # Pass the response object along with a direct dict translation
-        # This guarantees local proxy fields are not stripped by the SDK model validator
         return self._filter_response(response)
 
     def _filter_response(self, response) -> dict:

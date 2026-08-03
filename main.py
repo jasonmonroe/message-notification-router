@@ -31,8 +31,6 @@ def run_main_pipeline(args: list):
     print(f"args={args}")
 
     show_banner(f"{APP_NAME}")
-
-
     
     data_handler = run_data_pipeline(args)
 

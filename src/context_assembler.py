@@ -13,7 +13,13 @@ from src.constants import ROUTING_PROMPT_TEMPLATE
 
 
 class ContextAssembler:
-    def __init__(self, data):
+    """
+    This class takes all the data and filters by each message row.  Then if needed it gets the media information to 
+    provide additional conte
+
+    Last it builds a prompt with all relevant data garned by the routed logic.
+    """
+    def __init__(self, data) -> None:
         self._business_id = None
         self._row = None
         
@@ -156,7 +162,7 @@ class ContextAssembler:
 - Muted by User: {'Muted' if group_muted_by_user == 1 else 'Unmuted'}
         """.strip()
             
-    def build_prompt_by_user(self, message_row: pd.DataFrame) -> dict:
+    def build_prompt_by_user(self, message_row: pd.DataFrame) -> str:
         """
         Ingestion and Context
         The Ingestion & Context Pipeline: For each row in messages.csv, aggregate the corresponding user 
@@ -166,6 +172,7 @@ class ContextAssembler:
         self._row = message_row
         self._business_id = self._row.business_id
 
+        # Get filtered dataset to usein the prompt generation
         dataset = self._filter_by_user(self._row.user_id)
         filepath = self._get_media_filepath(self._row.media_type, self._row.media_id)
     
@@ -174,12 +181,13 @@ class ContextAssembler:
 
         # Generate prompt string
         prompt = self.get_prompt(dataset)
-        dataset["prompt"] = prompt
-
-        return dataset
+        #dataset["prompt"] = prompt
+        #
+        #return dataset
+        return prompt
 
     def _get_media_filepath(self, media_type: str | None, media_id: str | None) -> str | None:
-        print(f"_get_media_filepath() media_type={media_type}, media_id={media_id}")
+        print(f"DBG: _get_media_filepath() media_type={media_type}, media_id={media_id}")
         if pd.isna(media_type) or not media_type or pd.isna(media_id) or not media_id:
             return None
 
@@ -205,7 +213,7 @@ class ContextAssembler:
 
         return None
 
-
+    # @TODO - old version
     def _get_media_filepath2(self, media_type: str | None, media_id: str | None) -> str | None:
         print(f"media_type={media_type}, media_id={media_id}")
         if pd.isna(media_type) or not media_type or pd.isna(media_id) or not media_id:
@@ -283,3 +291,7 @@ class ContextAssembler:
         
         # Fallback if the image contains no readable text (e.g. standard photo)
         return "- Image Description: Attached photograph/image file (No embedded text detected)."
+
+
+    def export(self) -> dict:
+        return {}

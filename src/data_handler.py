@@ -65,7 +65,7 @@ class DataHandler:
             filepath = os.path.join(DATASET_DIR, f"{csv_name}.csv")
             setattr(self, csv_name, pd.read_csv(filepath))
 
-    def _format_output(self, results: dict):
+    def _format_output(self, results: dict) -> pd.DataFrame | None:
         
         # Prepare the row values (serialize lists if needed)
         row_data = results.copy()
@@ -73,6 +73,7 @@ class DataHandler:
             row_data["evidence_message_ids"] = json.dumps(row_data["evidence_message_ids"])
         
         message_id = row_data.get("message_id")
+        output_df = None
         
         # Find and update the matching row, or append if it doesn't exist
         if message_id in output_df["message_id"].values:
@@ -82,13 +83,18 @@ class DataHandler:
         else:
             output_df = pd.concat([output_df, pd.DataFrame([row_data])], ignore_index=True)
 
+        return output_df
+
     def save_output(self, results: dict) -> None:
         print("\nsave_output()")
 
         # Read the file directly from disk to ensure it's up to date in loops
         output_filepath = os.path.join(DATASET_DIR, OUTPUT_FILE)
         output_df = pd.read_csv(output_filepath) if os.path.exists(output_filepath) else self.output.copy()
-        output_df = self._format_output(output_df)
+
+        formatted_output_df = self._format_output(results)
+        if formatted_output_df is not None:
+            output_df = formatted_output_df
         
         # Write the complete updated DataFrame back to the CSV file
         print(f"output_filepath={output_filepath}")
@@ -96,22 +102,15 @@ class DataHandler:
 
         output_df.to_csv(output_filepath, index=False)
 
-
     def describe_audio(self) -> None:
-
         if not self.voice_notes:
             print("\n⚠️ Warning: No audio files loaded...")
             return None
 
-        print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
-        print(f"ℹ️  Audio File Count: {len(self.voice_notes)}")
+        #print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
+        #print(f"ℹ️  Audio File Count: {len(self.voice_notes)}")
 
         subtitles = []
-
-
-        # subtitles.append(f"ℹ️")
-        
-
         for idx, voice_note_id, file_path in enumerate(self.voice_notes):
 
             if not os.path.isfile(file_path):
@@ -121,16 +120,10 @@ class DataHandler:
             subtitles.append(f"ℹ️Filename: {voice_note_id}")
             subtitles.append(f"ℹ️Filepath: {file_path}")
 
-            #print(f"\n🔈 Audio File {idx}")
-
-            #print(f"ℹ️Filename: {voice_note_id}")
-            #print(f"ℹ️Filepath: {file_path}")
-
             # Convert to audio file to audio data
             audio_data, sr = lr.load(file_path, sr=AUDIO_SAMPLE_RATE)
             audio_duration = lr.get_duration(y=audio_data, sr=sr)
-            #subtitles.append(f"ℹ️ Data: {audio_data}")
-            subtitles.append(f"ℹ️Duration: {audio_tag.duration} seconds")
+            subtitles.append(f"ℹ️Duration: {audio_duration} seconds")
             subtitles.append(f"ℹ️ Shape: {audio_data.shape}")
 
             # Audio Metadata
@@ -164,7 +157,6 @@ class DataHandler:
             subtitles.append(f"ℹ️Is Lossless?: {audio_tag.is_lossless}")
 
         show_banner(f"🔈 Describe Audio Data ({len(self.voice_notes)}) 🔈", subtitles)
-
 
     def describe_images(self) -> None:
         if not self.images:
@@ -200,55 +192,6 @@ class DataHandler:
             cv2.destroyAllWindows()
         
         show_banner(f"🏞️ Describe Image Data ({len(self.images)}) 🏞️", subtitles)
-
-
-    # @TODO old version
-    def describe_audio2(self) -> None:
-        if not self.audios:
-            print("\n⚠️ Warning: No audio files loaded...")
-            return
-            
-        print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
-        print(f"ℹ️  Audio File Count: {len(self.audios)}")
-        
-        audio_filenames = os.listdir(AUDIO_DIR)
-        print(f"audio_files={audio_filenames}")
-        
-        for idx, audio in enumerate(self.audios):      
-            print(f"\n🔈 Audio File {idx}")
-
-            for key, value in audio.items():
-                print(f"ℹ️ {key.title()}: {value}")
-               
-    # @todo old version
-    def describe_images2(self) -> None:
-
-        if not self.images:
-            print("\n⚠️ Warning: No images loaded.")
-            return None
-      
-        print("\n# --- 🏞️ Describe Image Data 🏞️ --- #")
-        print(f"Image Count: {len(self.images)}")
-
-        image_files = os.listdir(IMAGES_DIR)
-        for idx, image in enumerate(self.images):
-            image_filepath = image_files[idx]
-            image_filename, _ = os.path.splitext(image_filepath)
-
-            print(f"\n🏞️ Image {idx}")
-            print(f"\tℹ️ Filename: {image_filename}")
-            
-
-            height, width, channels = image.shape
-            print(f"\tℹ️ Height: {height}, Width: {width}, Channels: {channels}")
-
-
-
-            total_pixels = img_data.size              # Total number of elements
-            data_type = img_data.dtype                # Usually uint8 (8-bit pixels)
-
-    
-            cv2.imshow(image_filename, image)
 
     def describe(self) -> None:
         sample_text = "Sample" if self._use_sample else ""
@@ -421,3 +364,52 @@ class DataHandler:
                 print(f"⚠️ Warning: Failed to load image at {image_filepath}")
                 
         return images
+
+
+ # @TODO old version
+    def describe_audio2(self) -> None:
+        if not self.audios:
+            print("\n⚠️ Warning: No audio files loaded...")
+            return
+            
+        print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
+        print(f"ℹ️  Audio File Count: {len(self.audios)}")
+        
+        audio_filenames = os.listdir(AUDIO_DIR)
+        print(f"audio_files={audio_filenames}")
+        
+        for idx, audio in enumerate(self.audios):      
+            print(f"\n🔈 Audio File {idx}")
+
+            for key, value in audio.items():
+                print(f"ℹ️ {key.title()}: {value}")
+               
+    # @todo old version
+    def describe_images2(self) -> None:
+
+        if not self.images:
+            print("\n⚠️ Warning: No images loaded.")
+            return None
+      
+        print("\n# --- 🏞️ Describe Image Data 🏞️ --- #")
+        print(f"Image Count: {len(self.images)}")
+
+        image_files = os.listdir(IMAGES_DIR)
+        for idx, image in enumerate(self.images):
+            image_filepath = image_files[idx]
+            image_filename, _ = os.path.splitext(image_filepath)
+
+            print(f"\n🏞️ Image {idx}")
+            print(f"\tℹ️ Filename: {image_filename}")
+            
+
+            height, width, channels = image.shape
+            print(f"\tℹ️ Height: {height}, Width: {width}, Channels: {channels}")
+
+
+
+            total_pixels = img_data.size              # Total number of elements
+            data_type = img_data.dtype                # Usually uint8 (8-bit pixels)
+
+    
+            cv2.imshow(image_filename, image)
