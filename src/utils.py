@@ -168,3 +168,22 @@ def log_chat_transcript(stage: str, content: str) -> None:
     with open(CHAT_TRANSCRIPT_FILE, "a", encoding="utf-8") as log_file:
         log_file.write(log_entry)
 
+
+def get_progress_bar(idx: int, total: int) -> str:
+    """
+    Displays progress of claim analysis.
+
+    :param idx:
+    :param total:
+    :return:
+    """
+    print("")
+
+    i_empty, i_full = "☑️ ", "✅️"
+    completion_pct = ((idx + 1) / total) * 100
+
+    graphic = ""
+    for i in range(total):
+        graphic += i_full if i <= idx else i_empty
+
+    return graphic + f"\t{completion_pct:.1f}%"

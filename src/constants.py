@@ -12,7 +12,7 @@ ARGS_LIST = [
 ]
 
 # Misc 
-MAX_TOKENS = 512
+MAX_TOKENS = 4096
 TOKEN_UNIT = 1000
 SECS_IN_MIN = 60
 PAUSE_TIMER = 1
@@ -21,7 +21,6 @@ SLEEP_TIMER_INC = 4
 RISK_FLAG_CNT = 5
 MSEC = 1000
 PEP8_LINE_LEN = 79
-
 
 # Dataset file names
 CSV_FILENAMES = [
@@ -33,10 +32,19 @@ CSV_FILENAMES = [
     "message_events",
     "message_history",
     "messages",
-    #"output",
+    "output",
     "user_business_history",
     "users",
     "voice_notes"
+]
+
+CSV_OUTPUT_COLS = [
+    "message_id", 
+    "action", 
+    "message_type", 
+    "reason",
+    "confidence", 
+    "evidence_message_ids", 
 ]
 
 # Dataset files
@@ -64,12 +72,13 @@ SYSTEM_INSTRUCTIONS = (
     "using exact action values: 'notify', 'digest', or 'mute'."
 ).strip()
 
-
-# src/constants.py
-
 ROUTING_PROMPT_TEMPLATE = """
 ## INCOMING MESSAGE TO ROUTE
 {incoming_message_context}
+-----------------------------------------------
+
+## MEDIA ATTACHMENT CONTEXT (Type: {media_type}, File: {media_filename})
+{media_content_description}
 -----------------------------------------------
 
 ## RECIPIENT USER CONTEXT (User ID: {user_id})

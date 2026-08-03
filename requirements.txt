@@ -4,7 +4,9 @@ dotenv
 librosa
 numpy
 openai
+openai-whisper
 opencv-python
 pandas
 python-dotenv
+pytesseract
 tinytag

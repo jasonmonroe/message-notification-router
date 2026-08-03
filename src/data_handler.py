@@ -1,10 +1,11 @@
 # src/data_handler.py
 
 # Python Libraries
+import csv
+import json
 import cv2
 import librosa as lr
 import os
-from pathlib import Path
 
 # Vendor Libraries
 import pandas as pd
@@ -15,9 +16,10 @@ from tinytag import TinyTag
 from src.constants import (
     AUDIO_DIR, 
     AUDIO_SAMPLE_RATE, 
-    CSV_FILENAMES, 
+    CSV_FILENAMES,
     DATASET_DIR, 
     IMAGES_DIR,
+    OUTPUT_FILE,
 )
 
 
@@ -25,9 +27,6 @@ class DataHandler:
     def __init__(self, args: dict) -> None:
         self._use_sample = args.get("sample")
         
-        self.data = None
-        self.df = None
-
         # Text 
         self.business_accounts = None
         self.daily_notification_summary = None
@@ -40,6 +39,7 @@ class DataHandler:
         self.user_business_history = None
         self.users = None
         self.voice_notes = None
+        self.audios = None
 
         self._load()
 
@@ -57,10 +57,41 @@ class DataHandler:
 
         # Supporting Text files (non-messages)
         for csv_name in CSV_FILENAMES:
-            if csv_name in ["messages", "output"]:
+            if csv_name == "messages":
                 continue
 
-            setattr(self, csv_name, pd.read_csv(os.path.join(DATASET_DIR, f"{csv_name}.csv")))
+            filepath = os.path.join(DATASET_DIR, f"{csv_name}.csv")
+            setattr(self, csv_name, pd.read_csv(filepath))
+
+    def save_output(self, results: dict) -> None:
+        print("\nsave_output()")
+        output_filepath = os.path.join(DATASET_DIR, OUTPUT_FILE)
+        
+        # Read the file directly from disk to ensure it's up to date in loops
+        if os.path.exists(output_filepath):
+            output_df = pd.read_csv(output_filepath)
+        else:
+            output_df = self.output.copy()
+        
+        # Prepare the row values (serialize lists if needed)
+        row_data = results.copy()
+        if isinstance(row_data.get("evidence_message_ids"), list):
+            row_data["evidence_message_ids"] = json.dumps(row_data["evidence_message_ids"])
+        
+        message_id = row_data.get("message_id")
+        
+        # Find and update the matching row, or append if it doesn't exist
+        if message_id in output_df["message_id"].values:
+            for column, value in row_data.items():
+                if column in output_df.columns:
+                    output_df.loc[output_df["message_id"] == message_id, column] = value
+        else:
+            output_df = pd.concat([output_df, pd.DataFrame([row_data])], ignore_index=True)
+            
+        # Write the complete updated DataFrame back to the CSV file
+        print(f"output_filepath={output_filepath}")
+        print(f"output_df={output_df}")
+        output_df.to_csv(output_filepath, index=False)
 
     def _get_audio(self) -> list:
         # https://lr.org/doc/latest/index.html
@@ -103,17 +134,14 @@ class DataHandler:
             try:
                 audio_tag = TinyTag.get(audio_filepath)
                 audio_dataset["title"] = audio_tag.title or "Unknown"
-                #for key, value in audio_dataset:
-                #    print(f"ℹ️ {key.title()}: {value}")
+            
 
             except Exception:
-                print("ℹ️ Title: Could not read metadata")
+                print("ℹ️ Title: Could not read metadat.")
 
             audio_files.append(audio_dataset)
             
         return audio_files
-
-
 
     def _get_images(self) -> list:
         print("Loading images...")
@@ -148,7 +176,6 @@ class DataHandler:
                 
         return images
 
-
     def describe_audio(self) -> None:
         if not self.audios:
             print("\n⚠️ Warning: No audio files loaded...")
@@ -160,21 +187,11 @@ class DataHandler:
         audio_filenames = os.listdir(AUDIO_DIR)
         print(f"audio_files={audio_filenames}")
         
-        for idx, audio in enumerate(self.audios):
-            #audio_filename = audio_filenames[idx]
-            #audio_filepath = os.path.join(AUDIO_DIR, audio_filename) # Get full path for TinyTag
-            #audio_name, _ = os.path.splitext(audio_filename)
-            #audio_tag = TinyTag.get(audio_filepath)
-            
+        for idx, audio in enumerate(self.audios):      
             print(f"\n🔈 Audio File {idx}")
 
-            for key, value in audio:
+            for key, value in audio.items():
                 print(f"ℹ️ {key.title()}: {value}")
-
-            #print(f"\tℹ️ Filename: {audio_name}")
-            #print(f"\tℹ️ Shape: {audio.shape}") # Works now because audio is an array
-            #print(f"\tℹ️ Duration: {lr.get_duration(y=audio, sr=AUDIO_SAMPLE_RATE):.2f} seconds")
-            #print(f"\tℹ️ Title: {audio_tag.title}")
                
     def describe_images(self) -> None:
 
@@ -236,4 +253,3 @@ class DataHandler:
 
         self.describe_audio()
         self.describe_images()
-        
