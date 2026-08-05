@@ -28,14 +28,14 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
     assembler = ContextAssembler(data_handler)
     import sys
 
-    output = []
+    output_rows = []
     for row in messages_df.itertuples():
         # @TODO - only test one particular row
         if row.Index == 21:
             
             prompt = assembler.build_prompt_by_user(row)
             response = chat_model.get_response(prompt)
-            output.append(response)
+            output_rows.append(response)
 
             # Convert LLM response into the proper output to save to CSV file
             data_handler.save_output(response)
@@ -43,5 +43,5 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
             print(get_progress_bar(row.Index, row_total))
 
     # List of output rows that need to be formatted
-    return output
+    return output_rows
     

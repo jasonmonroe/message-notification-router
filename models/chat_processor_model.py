@@ -106,37 +106,3 @@ class ChatProcessorModel:
             print(f"❌ Error occurred while parsing response: {e}")
             print(f" `repr(content_str)` was: {repr(content_str)}")
             return {}
-
-
-    # @TODO - old version. safe to delete
-    def _filter_response1(self, response: ChatCompletion) -> dict:
-        try:
-            choice = response.choices[0]
-            
-            # Check if the model hit the max token limit and got cut off
-            if getattr(choice, "finish_reason", None) == "length":
-                print(f"⚠️ Warning: Model response was cut off due to max_tokens limit!")
-
-            content_str = choice.message.content
-            if not content_str:
-                return {}
-
-            cleaned_str = content_str.strip()
-
-            # Try extracting from markdown code blocks first
-            json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned_str, re.DOTALL)
-            if json_match:
-                cleaned_str = json_match.group(1)
-            else:
-                # Fallback: Find the first '{' and the last '}'
-                start_idx = cleaned_str.find("{")
-                end_idx = cleaned_str.rfind("}")
-                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                    cleaned_str = cleaned_str[start_idx:end_idx+1]
-
-            return json.loads(cleaned_str.strip())
-
-        except (AttributeError, IndexError, json.JSONDecodeError) as e:
-            print(f"❌ Error occurred while parsing response: {e}")
-            print(f"chat_processor_model.py: line 96: Raw model response was: {repr(content_str)}")
-            return {}
