@@ -52,6 +52,37 @@ class DataHandler:
             self.messages = pd.read_csv(os.path.join(DATASET_DIR, "sample_messages.csv"))
 
     def save_output(self, csv_rows: list) -> None: 
+        """
+        Updates the existing CSV file by matching message_id using a list of lists.
+        Preserves unprocessed placeholder rows and updates existing ones.
+        """
+        
+        existing_data = {}
+        
+        # Read existing file if it already exists
+        if os.path.exists(OUTPUT_FILEPATH):
+            with open(OUTPUT_FILEPATH, "r", newline="", encoding="utf-8") as csv_file:
+                reader = csv.DictReader(csv_file)
+                for row in reader:
+                    msg_id = row.get("message_id")
+                    if msg_id:  # Ignore empty or malformed rows
+                        existing_data[msg_id] = row
+
+        # Map incoming list of lists to the header columns and update/upsert
+        for row_list in csv_rows:
+            row_dict = dict(zip(CSV_HEADER_COLS, row_list))
+            msg_id = row_dict.get("message_id")
+            if msg_id:
+                existing_data[msg_id] = row_dict
+
+        # Write all rows back out cleanly
+        with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=CSV_HEADER_COLS)
+            writer.writeheader()
+            for msg_id, row_data in existing_data.items():
+                writer.writerow(row_data)
+
+    def save_output2(self, csv_rows: list) -> None: 
         # Write all at once
         with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
