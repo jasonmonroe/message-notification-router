@@ -51,8 +51,9 @@ CSV_HEADER_COLS = [
 DATASET_DIR = "dataset/"
 AUDIO_DIR = os.path.join(DATASET_DIR, "media", "audio")
 IMAGES_DIR = os.path.join(DATASET_DIR, "media", "images")
+
+OUTPUT_FILEPATH = os.path.join(DATASET_DIR, "output.csv")
 CHAT_TRANSCRIPT_FILE = "log.txt"
-OUTPUT_FILE = "output.csv"
 
 AUDIO_SAMPLE_RATE = None
 

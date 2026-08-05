@@ -21,7 +21,7 @@ from src.constants import (
     DATASET_DIR, 
     IMAGES_DIR,
     MSEC,
-    OUTPUT_FILE,
+    OUTPUT_FILEPATH,
 )
 from src.utils import show_banner
 
@@ -85,10 +85,10 @@ class DataHandler:
     def save_output(self, csv_rows: list) -> None:
           
         # Write all at once
-        with open("output.csv", "w", newline="", encoding="utf-8") as f:
+        with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(CSV_HEADER_COLS) 
-            writer.writerows(csv_rows)           
+            writer.writerows(csv_rows.copy())           
 
 
     # @TODO - old version
