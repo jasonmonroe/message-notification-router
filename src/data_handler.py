@@ -17,6 +17,7 @@ from src.constants import (
     AUDIO_DIR, 
     AUDIO_SAMPLE_RATE, 
     CSV_FILENAMES,
+    CSV_HEADER_COLS,
     DATASET_DIR, 
     IMAGES_DIR,
     MSEC,
@@ -52,18 +53,14 @@ class DataHandler:
     def _load(self) -> None:
         print("Loading text files...")
         
-        # Text
-        filename = "sample" if self._use_sample else ""
-        filename = f"{filename}_messages.csv"
-        self.messages = pd.read_csv(os.path.join(DATASET_DIR, filename))
-
-        # Supporting Text files (non-messages)
         for csv_name in CSV_FILENAMES:
-            if csv_name == "messages":
-                continue
-
             filepath = os.path.join(DATASET_DIR, f"{csv_name}.csv")
+
             setattr(self, csv_name, pd.read_csv(filepath))
+
+        # Override messages with sample if necessary
+        if self._use_sample:
+            self.messages = pd.read_csv(os.path.join(DATASET_DIR, "sample_messages.csv"))
 
     def _format_output(self, results: dict) -> pd.DataFrame | None:
         
@@ -85,7 +82,17 @@ class DataHandler:
 
         return output_df
 
-    def save_output(self, results: dict) -> None:
+    def save_output(self, csv_rows: list) -> None:
+          
+        # Write all at once
+        with open("output.csv", "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(CSV_HEADER_COLS) 
+            writer.writerows(csv_rows)           
+
+
+    # @TODO - old version
+    def save_output2(self, results: dict) -> None:
         print("\nsave_output()")
 
         # Read the file directly from disk to ensure it's up to date in loops

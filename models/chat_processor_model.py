@@ -22,7 +22,7 @@ from src.utils import show_banner
 class ChatProcessorModel:
     def __init__(self, dataset: dict):
         self.name = "WhatsApp Chat Processing Model"
-        self._client = self._load_model(dataset.get("row_total", 0))
+        self._client = self._load_model(dataset.get("row_cnt", 0))
 
     def _load_model(self, row_cnt:int) -> OpenAI:
         if MODEL_API_URL is None or MODEL_NAME is None or MODEL_API_KEY is None:
@@ -64,7 +64,28 @@ class ChatProcessorModel:
             timeout=90.0
         )
 
-        return self._filter_response(response)
+        return self._format_response(self._filter_response(response))
+
+    def _format_response(self, response: dict) -> list:
+        return list(response.values())
+
+
+    # @todo - old version
+    def _format_response2(self, response: dict) -> str:
+
+        csv_row_str = ""
+        csv_row = list(response.items())
+        csv_column_cnt = len(csv_row)
+
+        comma = ","
+        for idx, (key, value) in enumerate(csv_row):
+            comma = "" if idx == csv_column_cnt - 1 else comma
+            csv_row_str += f"{value}{comma}"
+
+        
+        return csv_row_str
+
+
 
     def _filter_response(self, response) -> dict:
         try:

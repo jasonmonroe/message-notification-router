@@ -18,7 +18,6 @@ SECS_IN_MIN = 60
 PAUSE_TIMER = 1
 SLEEP_TIMER = 20
 SLEEP_TIMER_INC = 4
-RISK_FLAG_CNT = 5
 MSEC = 1000
 PEP8_LINE_LEN = 79
 MAX_HISTORICAL_MESSAGES = 5
@@ -39,7 +38,7 @@ CSV_FILENAMES = [
     "voice_notes"
 ]
 
-CSV_OUTPUT_COLS = [
+CSV_HEADER_COLS = [
     "message_id", 
     "action", 
     "message_type", 
@@ -64,14 +63,18 @@ MODEL_API_URL = os.getenv("MODEL_API_URL")
 MODEL_NAME = os.getenv("MODEL_NAME")
 
 # Prompt Information
-SYSTEM_INSTRUCTIONS = (
-    "You are a machine learning expert with extensive knowledge in multimodal prompts for an AI-powered system "
-    "such as WhatsApp that decides which messages deserve immediate attention, which should wait, and which should be muted.\n\n"
-    "CRITICAL EXECUTION RULES:\n"
-    "1. Analyze text data, user context, group metadata, and history together to make a routing determination.\n"
-    "2. You must output your final routing determination strictly as a valid JSON object matching the requested schema, "
-    "using exact action values: 'notify', 'digest', or 'mute'."
-).strip()
+SYSTEM_INSTRUCTIONS = """You are a machine learning expert with extensive knowledge in multimodal prompts for an AI-powered system such as WhatsApp that decides which messages deserve immediate attention, which should wait, and which should be muted.
+
+CRITICAL EXECUTION RULES:
+1. Analyze text data, user context, group metadata, and history together to make a routing determination.
+2. You must output your final routing determination strictly as a valid JSON object matching the requested schema, using exact action values: 'notify', 'digest', or 'mute'.
+
+CONFIDENCE SCORING CRITERIA:
+Evaluate your certainty for the chosen action on a scale from 0.0 to 1.0:
+- 1.0: Absolute certainty, clear intent, rich context matching user preferences.
+- 0.8 - 0.9: High confidence, minor ambiguity, or standard routing logic applied.
+- 0.5 - 0.7: Moderate uncertainty, mixed signals, or slight guesswork.
+- Below 0.5: High ambiguity, highly unpredictable content, or missing critical context.""".strip()
 
 ROUTING_PROMPT_TEMPLATE = """
 ## INCOMING MESSAGE TO ROUTE
@@ -111,7 +114,9 @@ Return your response as a valid JSON object wrapped inside a markdown code block
   "action": "...",
   "message_type": "...",
   "reason": "...",
-  "confidence": 0.95,
+  "confidence": 0.0 to 1.0,
   "evidence_message_ids": ["..."]
 }}
+
+** IMPORTANT: The object keys need to be in this order.  Do not deviate! **
 """.strip()
