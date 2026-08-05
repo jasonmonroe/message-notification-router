@@ -7,8 +7,6 @@ import textwrap
 
 # Local Libraries
 from src.constants import MAX_HISTORICAL_MESSAGES, PEP8_LINE_LEN, ROUTING_PROMPT_TEMPLATE
-from src.context_assembler import ContextAssembler
-
 
 class PromptBuilder:
     def __init__(self, dataset: dict):
@@ -25,7 +23,6 @@ class PromptBuilder:
             "users":  
             "user_business_history": 
         """
-
 
         # message_id,user_id,conversation_type,group_id,business_id,sender_user_id,created_at,message_text,media_type,media_id,forwarded_count
         #: # => filtered dataset
@@ -58,55 +55,28 @@ class PromptBuilder:
             if hasattr(self, key):
                 setattr(self, key, value)
 
-    def build(self, 
-        #business_accounts, 
-        #group_members,
-        groups: pd.DataFrame, 
-        #media_filepath, 
-        #message_history, 
-        #user_business_history,
-        #users,
-        ):
+    def build(self, groups: pd.DataFrame):
 
         self.prompt = ROUTING_PROMPT_TEMPLATE.format(
             business_id=self.message.business_id,
             business_sender_context=self._format_business_sender(),
             group_id=self.message.group_id,
             group_metadata_context=self._format_group_metadata(groups),
-            historical_evidence=self._format_historical_evidence(self.message_history),
+            historical_evidence=self._format_historical_evidence(),
             incoming_message_context=self._format_incoming_message(),
             media_content_description=self.media_description,
             media_filename=os.path.basename(self.media_filepath),
             media_type=self.message.media_type,
-            #message=self.message,
             message_id=self.message.message_id,
             recipient_user_context=self._format_recipient_user_context(),
             user_id=self.message.user_id,
         )
 
-        """
-        self.prompt = ROUTING_PROMPT_TEMPLATE.format(
-            business_id=self._business_id if pd.notna(self._business_id) else "N/A",
-            business_sender_context=self._format_business_sender_context(dataset.get("business_accounts"), dataset.get("user_business_history")),
-            group_id=self._row.group_id,
-            group_metadata_context=self._format_group_metadata(dataset.get("group_members")),
-            historical_evidence=self._format_historical_evidence(dataset.get("message_history")),
-            incoming_message_context=self._format_incoming_message(),
-            media_content_description=self._format_media_content_description(dataset.get("filepath")),
-            media_filename=os.path.basename(dataset.get("filepath")),
-            media_type=self._row.media_type,
-            message_id=self._row.message_id,
-            recipient_user_context=self._format_recipient_user_context(dataset.get("users")),
-            user_id=self._row.user_id,
-        )
-        """
-
-
     # --- Format Attributes --- #
 
     def _format_business_sender(self) -> str:
         # If the current message has no business ID, it's a personal or group message. Skip business context entirely!
-        if pd.isna(self.business_id) or not self.business_id:
+        if pd.isna(self.message.business_id) or not self.message.business_id:
             return "Not applicable (Personal or Group message)."
 
         business_df = self.business_accounts
@@ -148,7 +118,6 @@ class PromptBuilder:
         history_info = _get_history_info(business_history_df)    
 
         return f"{business_info}\n{history_info}".strip()
-
 
     def _format_group_metadata(self, groups_df: pd.DataFrame) -> str:
         # Filter for the target group
@@ -199,7 +168,7 @@ class PromptBuilder:
                 "- ID: {message_id} | Date: {created_at} | Text: {message_text}...".format(
                     message_id=row.get("message_id"),
                     created_at=row.get("created_at"),
-                    message_text=str(row.get("message_text", ""))[:{PEP8_LINE_LEN}]
+                    message_text=str(row.get("message_text", ""))[:PEP8_LINE_LEN]
                 ).strip()
             )
 

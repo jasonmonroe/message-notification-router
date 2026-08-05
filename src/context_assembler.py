@@ -43,16 +43,13 @@ class ContextAssembler:
         and past chat history (message_history.csv) into a single structured context payload.
         """
 
-        #self._message = message_row
-        #self._business_id = message_row.business_id
-
         # Get filtered dataset to usein the prompt generation
         filtered_dataset = self._filter_by_user(message_row.user_id)
 
         # Filter by group ID, note: group_members has already been filtered by user so we just need to filter by group_id
         filtered_group_dataset = self._filter_by_group(filtered_dataset["group_members"], message_row.group_id)
         filtered_dataset = {**filtered_dataset, **filtered_group_dataset}
-        filtered_dataset["message"] = message_row.copy()
+        filtered_dataset["message"] = message_row
         
         print(f"DBG: filtered_dataset={filtered_dataset}")
 
@@ -60,36 +57,30 @@ class ContextAssembler:
         filepath = self._get_media_filepath(message_row.media_type, message_row.media_id)
         if filepath:
             filtered_dataset["media_filepath"] = filepath
-            filtered_dataset["media_description"] = self._get_media_description(filepath)
+            filtered_dataset["media_description"] = self._get_media_description(message_row.media_type, filepath)
 
         # Load Prompt Builder to get the prompt
         builder = PromptBuilder(filtered_dataset)
+
+        print(f"prompt = {builder.prompt}")
 
         import sys
         sys.exit(0)
 
         return builder.prompt
 
-        
-
-        # Generate prompt string
-        #@ TODO use prompt_builder
-        return self.____get_prompt(filtered_dataset)
-
-
     def _filter_by_user(self, user_id: str) -> dict:
         # Filter user business history
         user_business_history = self._user_business_history[self._user_business_history["user_id"] == user_id]
         user_business_ids = user_business_history["business_id"].tolist()   
-        business_accounts = self._business_accounts[self._business_accounts["business_id"].isin(user_business_ids)] if user_business_ids else pd.DataFrame(),
-        #self._business_id = self._row.business_id
+        business_accounts = self._business_accounts[self._business_accounts["business_id"].isin(user_business_ids)] if user_business_ids else pd.DataFrame()
    
         return { 
             "business_accounts": business_accounts,
             "group_members": self._group_members[self._group_members["user_id"] == user_id],
             "message_history": self._message_history[self._message_history["user_id"] == user_id],
-            "users": self._users[self._users["user_id"] == user_id],
             "user_business_history": user_business_history,
+            "users": self._users[self._users["user_id"] == user_id]
         }
 
     def _filter_by_group(self, group_members: dict, group_id: str) -> dict:
@@ -122,14 +113,14 @@ class ContextAssembler:
         if media_df is not None and not media_df.empty and id_column in media_df.columns:
             filtered_media = media_df[media_df[id_column] == media_id]
             
-            if not filtered_media.empty:
+            if filtered_media:
                 # @TODO - old: raw_path = filtered_media.iloc[0].get("file_path") or filtered_media.iloc[0].get("filename")
                 media_filepath = filtered_media.iloc[0].get("file_path")
+                
                 if media_filepath:
                     # Ensure path points to the correct location (e.g., inside dataset directory)
                     # Adjust 'dataset/' prefix if your folder structure differs
-                    full_path = media_filepath if os.path.exists(media_filepath) else os.path.join("dataset", media_filepath)
-                    return full_path
+                    return media_filepath if os.path.exists(media_filepath) else os.path.join("dataset", media_filepath)
 
         return None
 

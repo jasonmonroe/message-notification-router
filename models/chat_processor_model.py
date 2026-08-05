@@ -24,14 +24,14 @@ class ChatProcessorModel:
         self.name = "WhatsApp Chat Processing Model"
         self._client = self._load_model(dataset.get("row_total", 0))
 
-    def _load_model(self, row_total:int) -> OpenAI:
+    def _load_model(self, row_cnt:int) -> OpenAI:
         if MODEL_API_URL is None or MODEL_NAME is None or MODEL_API_KEY is None:
             raise ValueError("🚨 Credentials aren't properly being read. Check .env file. 🚨")
              
         subtitles = [
             f"🤖MODEL_NAME: {MODEL_NAME}",
             f"🌐️MODEL_API_URL: {MODEL_API_URL}",
-            f"📄️DATA ROWS: {row_total}"
+            f"📄️DATA ROWS: {row_cnt}"
         ]
 
         show_banner(self.name.upper(), subtitles)
