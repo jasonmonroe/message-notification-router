@@ -33,10 +33,9 @@ def run_main_pipeline(args: list):
     show_banner(f"{APP_NAME}")
     
     data_handler = run_data_pipeline(args)
-
-    # Message Reviewer
     output_rows = run_message_reviewer_pipeline(data_handler)
     data_handler.save_output(output_rows)
+
 
 def parse_args(command_line_args: list[str]) -> dict:
     return {arg.strip("--"): (arg in command_line_args) for arg in ARGS_LIST}

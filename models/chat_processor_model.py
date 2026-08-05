@@ -109,20 +109,3 @@ class ChatProcessorModel:
 
     def _format_response(self, response: dict) -> list:
         return list(response.values())
-
-    """
-    # @todo - old version
-    def _format_response2(self, response: dict) -> str:
-
-        csv_row_str = ""
-        csv_row = list(response.items())
-        csv_column_cnt = len(csv_row)
-
-        comma = ","
-        for idx, (key, value) in enumerate(csv_row):
-            comma = "" if idx == csv_column_cnt - 1 else comma
-            csv_row_str += f"{value}{comma}"
-
-        
-        return csv_row_str
-    """

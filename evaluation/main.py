@@ -16,7 +16,9 @@ from src.utils import get_progress_bar
 
 def run_data_pipeline(args: list):
     data_handler = DataHandler(args)
-    #data_handler.describe()
+
+    if args.get("eda"):
+        data_handler.describe()
 
     return data_handler
 
@@ -26,7 +28,6 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     messages_df = data_handler.messages
     messages_cnt = messages_df.shape[0]
-    dataset = {"row_cnt": messages_cnt}
 
     chat_model = ChatProcessorModel(messages_cnt)
     assembler = ContextAssembler(data_handler)
@@ -42,9 +43,6 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
         
             time.sleep(SLEEP_TIMER)
             output_rows.append(response)
-
-            # Convert LLM response into the proper output to save to CSV file
-            #data_handler.save_output(response)
 
             print(get_progress_bar(row.Index, messages_cnt))
 

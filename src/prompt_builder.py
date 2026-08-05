@@ -24,12 +24,6 @@ class PromptBuilder:
             "user_business_history": 
         """
 
-        # message_id,user_id,conversation_type,group_id,business_id,sender_user_id,created_at,message_text,media_type,media_id,forwarded_count
-        #: # => filtered dataset
-        #: ## => message row column
-        #: ### => message row
-        #: temp variables
-
         self.business_accounts = None #
         #self.business_id = None ##
         #self.group_id = None ##

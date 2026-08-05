@@ -2,7 +2,6 @@
 
 # Python Libraries
 import csv
-import json
 import cv2
 import librosa as lr
 import os
@@ -25,7 +24,6 @@ from src.constants import (
 )
 from src.utils import show_banner
 
-
 class DataHandler:
     def __init__(self, args: dict) -> None:
         self._use_sample = args.get("sample")
@@ -46,10 +44,6 @@ class DataHandler:
 
         self._load()
 
-        # Media
-        #self.audios = self._load_audio()
-        #self.images = self._load_images()
-
     def _load(self) -> None:
         print("Loading text files...")
         
@@ -61,56 +55,12 @@ class DataHandler:
         if self._use_sample:
             self.messages = pd.read_csv(os.path.join(DATASET_DIR, "sample_messages.csv"))
 
-    """
-    # @todo - old
-    def _format_output(self, results: dict) -> pd.DataFrame | None:
-        
-        # Prepare the row values (serialize lists if needed)
-        row_data = results.copy()
-        if isinstance(row_data.get("evidence_message_ids"), list):
-            row_data["evidence_message_ids"] = json.dumps(row_data["evidence_message_ids"])
-        
-        message_id = row_data.get("message_id")
-        output_df = None
-        
-        # Find and update the matching row, or append if it doesn't exist
-        if message_id in output_df["message_id"].values:
-            for column, value in row_data.items():
-                if column in output_df.columns:
-                    output_df.loc[output_df["message_id"] == message_id, column] = value
-        else:
-            output_df = pd.concat([output_df, pd.DataFrame([row_data])], ignore_index=True)
-
-        return output_df
-    """
-
     def save_output(self, csv_rows: list) -> None: 
         # Write all at once
         with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(CSV_HEADER_COLS) 
             writer.writerows(csv_rows.copy())           
-
-    
-    """
-    # @TODO - old version
-    def save_output2(self, results: dict) -> None:
-        print("\nsave_output()")
-
-        # Read the file directly from disk to ensure it's up to date in loops
-        output_filepath = os.path.join(DATASET_DIR, OUTPUT_FILE)
-        output_df = pd.read_csv(output_filepath) if os.path.exists(output_filepath) else self.output.copy()
-
-        formatted_output_df = self._format_output(results)
-        if formatted_output_df is not None:
-            output_df = formatted_output_df
-        
-        # Write the complete updated DataFrame back to the CSV file
-        print(f"output_filepath={output_filepath}")
-        print(f"output_df={output_df}")
-
-        output_df.to_csv(output_filepath, index=False)
-    """
 
     def describe_audio(self) -> None:
         if not self.voice_notes:
@@ -236,188 +186,3 @@ class DataHandler:
 
         self.describe_audio()
         self.describe_images()
-
-
-    """
-    # @TODO - do I even need?
-    def _get_audio(self) -> list:
-        # https://lr.org/doc/latest/index.html
-        # https://www.comet.com/site/blog/working-with-audio-data-for-machine-learning-in-python/
-        
-        print("Loading audio files...")
-
-        if not os.path.exists(AUDIO_DIR):
-            print(f"\n🚨 Error: Directory not found -> {AUDIO_DIR} 🚨.")
-            return []
-
-        audio_files = []
-        for idx, audio_filename in enumerate(os.listdir(AUDIO_DIR)):
-            audio_filepath = os.path.join(AUDIO_DIR, audio_filename)
-            
-            if not os.path.isfile(audio_filepath):
-                continue
-                
-            print(f"\n🔈 Audio File {idx}")
-
-            audio_data, sr = lr.load(audio_filepath, sr=AUDIO_SAMPLE_RATE)
-            #print(f"ℹ️ Shape: {audio_data.shape}")
-
-            # Calculate duration using the loaded array data
-            duration = lr.get_duration(y=audio_data, sr=sr)
-            #print(f"ℹ️ Duration: {duration:.2f} seconds")
-
-            #print(f"ℹ️ Filename: {audio_filename}")
-            
-            # Load the raw waveform array and sampling rate
-            audio_dataset = {
-                "filename": audio_filename,
-                "filepath": audio_filepath,
-                "data": audio_data,
-                "duration": duration,
-                "shape": audio_data.shape
-            }
-
-        # Use TinyTag on the file path to extract metadata tags securely
-        try:
-            audio_tag = TinyTag.get(audio_filepath)
-            
-            # Add attributes to the dictionary
-            audio_dataset["title"] = audio_tag.title or "Unknown"
-            audio_dataset["artist"] = audio_tag.artist
-            audio_dataset["albumartist"] = audio_tag.albumartist
-            audio_dataset["album"] = audio_tag.album
-            audio_dataset["composer"] = audio_tag.composer
-            audio_dataset["track"] = audio_tag.track
-            audio_dataset["track_total"] = audio_tag.track_total
-            audio_dataset["disc"] = audio_tag.disc
-            audio_dataset["disc_total"] = audio_tag.disc_total
-            audio_dataset["year"] = audio_tag.year
-            audio_dataset["genre"] = audio_tag.genre
-            audio_dataset["comment"] = audio_tag.comment
-            audio_dataset["filesize"] = audio_tag.filesize
-            audio_dataset["audio_offset"] = audio_tag.audio_offset
-            audio_dataset["bitrate"] = audio_tag.bitrate
-            audio_dataset["samplerate"] = audio_tag.samplerate
-            audio_dataset["channels"] = audio_tag.channels
-            audio_dataset["bitdepth"] = audio_tag.bitdepth
-            audio_dataset["file_format"] = audio_tag.file_format
-            audio_dataset["is_lossless"] = audio_tag.is_lossless
-
-            print("--- Basic Properties ---")
-            print(f"Duration: {audio_tag.duration} seconds")
-            print(f"Filesize: {audio_tag.filesize} bytes")
-            print(f"Audio Offset: {audio_tag.audio_offset}")
-            print(f"Bitrate: {audio_tag.bitrate} kbps")
-            print(f"Sample Rate: {audio_tag.samplerate} Hz")
-            print(f"Channels: {audio_tag.channels}")
-            print(f"Bit Depth: {audio_tag.bitdepth}")
-            
-            print("\n--- ID3 / Tag Metadata ---")
-            print(f"Title: {audio_tag.title}")
-            print(f"Artist: {audio_tag.artist}")
-            print(f"Album Artist: {audio_tag.albumartist}")
-            print(f"Album: {audio_tag.album}")
-            print(f"Composer: {audio_tag.composer}")
-            print(f"Track Number: {audio_tag.track}")
-            print(f"Track Total: {audio_tag.track_total}")
-            print(f"Disc Number: {audio_tag.disc}")
-            print(f"Disc Total: {audio_tag.disc_total}")
-            print(f"Year / Date: {audio_tag.year}")
-            print(f"Genre: {audio_tag.genre}")
-            print(f"Comment: {audio_tag.comment}")
-            
-            # Additional helper attributes TinyTag provides:
-            print(f"\n--- Additional Info ---")
-            print(f"File Format: {audio_tag.file_format}")
-            print(f"Is Lossless?: {audio_tag.is_lossless}")
-
-        except Exception:
-            print("ℹ️ Title: Could not read metadata.")
-
-            audio_files.append(audio_dataset)
-            
-        return audio_files
-
-    # @TODO - do I even need?
-    def _get_images(self) -> list:
-        print("Loading images...")
-
-        if not os.path.exists(IMAGES_DIR):
-            print(f"\n🚨 Error: Directory not found -> {IMAGES_DIR} 🚨.\n")
-            return []
-
-        images = []
-        for image_filename in os.listdir(IMAGES_DIR):
-            image_filepath = os.path.join(IMAGES_DIR, image_filename)
-
-            image_dataset = {
-                "filename": image_filename,
-                "filepath": image_filepath,
-            }
-            
-            # Skip directories if any accidentally exist inside the folder
-            if not os.path.isfile(image_filepath):
-                continue
-            
-            # Read the image
-            img_data = cv2.imread(image_filepath)
-            
-            # Verify OpenCV actually read the file successfully
-            if img_data is not None:
-                image_dataset["data"] = img_data
-
-                images.append(img_data)
-            else:
-                print(f"⚠️ Warning: Failed to load image at {image_filepath}")
-                
-        return images
-
-
-    # @TODO old version
-    def describe_audio2(self) -> None:
-        if not self.audios:
-            print("\n⚠️ Warning: No audio files loaded...")
-            return
-            
-        print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
-        print(f"ℹ️  Audio File Count: {len(self.audios)}")
-        
-        audio_filenames = os.listdir(AUDIO_DIR)
-        print(f"audio_files={audio_filenames}")
-        
-        for idx, audio in enumerate(self.audios):      
-            print(f"\n🔈 Audio File {idx}")
-
-            for key, value in audio.items():
-                print(f"ℹ️ {key.title()}: {value}")
-               
-    # @todo old version
-    def describe_images2(self) -> None:
-
-        if not self.images:
-            print("\n⚠️ Warning: No images loaded.")
-            return None
-      
-        print("\n# --- 🏞️ Describe Image Data 🏞️ --- #")
-        print(f"Image Count: {len(self.images)}")
-
-        image_files = os.listdir(IMAGES_DIR)
-        for idx, image in enumerate(self.images):
-            image_filepath = image_files[idx]
-            image_filename, _ = os.path.splitext(image_filepath)
-
-            print(f"\n🏞️ Image {idx}")
-            print(f"\tℹ️ Filename: {image_filename}")
-            
-
-            height, width, channels = image.shape
-            print(f"\tℹ️ Height: {height}, Width: {width}, Channels: {channels}")
-
-
-
-            total_pixels = img_data.size              # Total number of elements
-            data_type = img_data.dtype                # Usually uint8 (8-bit pixels)
-
-    
-            cv2.imshow(image_filename, image)
-            """
