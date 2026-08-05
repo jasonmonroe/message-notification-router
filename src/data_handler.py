@@ -56,7 +56,7 @@ class DataHandler:
         Updates the existing CSV file by matching message_id using a list of lists.
         Preserves unprocessed placeholder rows and updates existing ones.
         """
-        
+
         existing_data = {}
         
         # Read existing file if it already exists
@@ -82,6 +82,7 @@ class DataHandler:
             for msg_id, row_data in existing_data.items():
                 writer.writerow(row_data)
 
+    # @todo - backup
     def save_output2(self, csv_rows: list) -> None: 
         # Write all at once
         with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:

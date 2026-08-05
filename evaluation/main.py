@@ -12,7 +12,7 @@ from models.chat_processor_model import ChatProcessorModel
 from src.constants import PAUSE_TIMER
 from src.context_assembler import ContextAssembler
 from src.data_handler import DataHandler
-from src.utils import get_progress_bar
+from src.utils import get_progress_bar, show_timer, start_timer
 
 
 def run_data_pipeline(args: list):
@@ -37,12 +37,15 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
     output_rows = []
     for row in messages_df.itertuples():
         # @TODO - only test one particular row
+        print(f"\nrow.Index={row.Index}")
         if row.Index == 21:
             
+            start_time = start_timer()
             prompt = assembler.build_prompt_by_user(row)
             print(f"\nDBG:prompt = {prompt}")
-            response = None #chat_model.get_response(prompt) # response is a list
+            response = chat_model.get_response(prompt) # response is a list
             print(f"\nDBG: response = {response}")
+            show_timer(start_time)
         
             time.sleep(PAUSE_TIMER)
             output_rows.append(response)
@@ -51,6 +54,6 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     # List of output rows that need to be formatted
     print(f"\nDBG: output_rows={output_rows}")
-    sys.exit(0)
+    #sys.exit(0)
     return output_rows
     
