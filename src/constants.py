@@ -13,7 +13,6 @@ ARGS_LIST = [
 
 # Misc 
 MAX_TOKENS = 4096
-TOKEN_UNIT = 1000
 SECS_IN_MIN = 60
 PAUSE_TIMER = 1
 SLEEP_TIMER = 20
@@ -48,13 +47,12 @@ CSV_HEADER_COLS = [
 ]
 
 # Dataset files
+CHAT_TRANSCRIPT_FILE = "log.txt"
 DATASET_DIR = "dataset/"
+OUTPUT_FILEPATH = os.path.join(DATASET_DIR, "output.csv")
+
 AUDIO_DIR = os.path.join(DATASET_DIR, "media", "audio")
 IMAGES_DIR = os.path.join(DATASET_DIR, "media", "images")
-
-OUTPUT_FILEPATH = os.path.join(DATASET_DIR, "output.csv")
-CHAT_TRANSCRIPT_FILE = "log.txt"
-
 AUDIO_SAMPLE_RATE = None
 
 # Model Information

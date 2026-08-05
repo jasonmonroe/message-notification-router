@@ -14,12 +14,12 @@ from tinytag import TinyTag
 
 # Local Libraries
 from src.constants import (
-    AUDIO_DIR, 
+    #AUDIO_DIR, 
     AUDIO_SAMPLE_RATE, 
     CSV_FILENAMES,
     CSV_HEADER_COLS,
     DATASET_DIR, 
-    IMAGES_DIR,
+    #IMAGES_DIR,
     MSEC,
     OUTPUT_FILEPATH,
 )
@@ -55,13 +55,14 @@ class DataHandler:
         
         for csv_name in CSV_FILENAMES:
             filepath = os.path.join(DATASET_DIR, f"{csv_name}.csv")
-
             setattr(self, csv_name, pd.read_csv(filepath))
 
         # Override messages with sample if necessary
         if self._use_sample:
             self.messages = pd.read_csv(os.path.join(DATASET_DIR, "sample_messages.csv"))
 
+    """
+    # @todo - old
     def _format_output(self, results: dict) -> pd.DataFrame | None:
         
         # Prepare the row values (serialize lists if needed)
@@ -81,16 +82,17 @@ class DataHandler:
             output_df = pd.concat([output_df, pd.DataFrame([row_data])], ignore_index=True)
 
         return output_df
+    """
 
-    def save_output(self, csv_rows: list) -> None:
-          
+    def save_output(self, csv_rows: list) -> None: 
         # Write all at once
-        with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
+        with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
+            writer = csv.writer(csv_file)
             writer.writerow(CSV_HEADER_COLS) 
             writer.writerows(csv_rows.copy())           
 
-
+    
+    """
     # @TODO - old version
     def save_output2(self, results: dict) -> None:
         print("\nsave_output()")
@@ -108,18 +110,15 @@ class DataHandler:
         print(f"output_df={output_df}")
 
         output_df.to_csv(output_filepath, index=False)
+    """
 
     def describe_audio(self) -> None:
         if not self.voice_notes:
             print("\n⚠️ Warning: No audio files loaded...")
             return None
 
-        #print("\n# --- 🔈 Describe Audio Data 🔈 --- #")
-        #print(f"ℹ️  Audio File Count: {len(self.voice_notes)}")
-
         subtitles = []
         for idx, voice_note_id, file_path in enumerate(self.voice_notes):
-
             if not os.path.isfile(file_path):
                 continue
 
@@ -239,6 +238,7 @@ class DataHandler:
         self.describe_images()
 
 
+    """
     # @TODO - do I even need?
     def _get_audio(self) -> list:
         # https://lr.org/doc/latest/index.html
@@ -373,7 +373,7 @@ class DataHandler:
         return images
 
 
- # @TODO old version
+    # @TODO old version
     def describe_audio2(self) -> None:
         if not self.audios:
             print("\n⚠️ Warning: No audio files loaded...")
@@ -420,3 +420,4 @@ class DataHandler:
 
     
             cv2.imshow(image_filename, image)
+            """

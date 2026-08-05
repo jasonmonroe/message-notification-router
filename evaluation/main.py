@@ -28,7 +28,7 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
     messages_cnt = messages_df.shape[0]
     dataset = {"row_cnt": messages_cnt}
 
-    chat_model = ChatProcessorModel(dataset)
+    chat_model = ChatProcessorModel(messages_cnt)
     assembler = ContextAssembler(data_handler)
     import sys
 

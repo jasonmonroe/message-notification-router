@@ -20,11 +20,7 @@ from src.constants import (
 from src.utils import show_banner
 
 class ChatProcessorModel:
-    def __init__(self, dataset: dict):
-        self.name = "WhatsApp Chat Processing Model"
-        self._client = self._load_model(dataset.get("row_cnt", 0))
-
-    def _load_model(self, row_cnt:int) -> OpenAI:
+    def __init__(self, row_cnt: int):
         if MODEL_API_URL is None or MODEL_NAME is None or MODEL_API_KEY is None:
             raise ValueError("🚨 Credentials aren't properly being read. Check .env file. 🚨")
              
@@ -35,7 +31,11 @@ class ChatProcessorModel:
         ]
 
         show_banner(self.name.upper(), subtitles)
-        
+
+        self.name = "WhatsApp Chat Processing Model"
+        self._client = self._load_model(row_cnt)
+
+    def _load_model(self, row_cnt:int) -> OpenAI:
         return OpenAI(
             base_url=MODEL_API_URL,
             api_key=MODEL_API_KEY,
@@ -66,28 +66,7 @@ class ChatProcessorModel:
 
         return self._format_response(self._filter_response(response))
 
-    def _format_response(self, response: dict) -> list:
-        return list(response.values())
-
-
-    # @todo - old version
-    def _format_response2(self, response: dict) -> str:
-
-        csv_row_str = ""
-        csv_row = list(response.items())
-        csv_column_cnt = len(csv_row)
-
-        comma = ","
-        for idx, (key, value) in enumerate(csv_row):
-            comma = "" if idx == csv_column_cnt - 1 else comma
-            csv_row_str += f"{value}{comma}"
-
-        
-        return csv_row_str
-
-
-
-    def _filter_response(self, response) -> dict:
+    def _filter_response(self, response: ChatCompletion) -> dict:
         try:
             if hasattr(response, "choices"):
                 choice = response.choices[0]
@@ -124,6 +103,26 @@ class ChatProcessorModel:
             return content
 
         except (AttributeError, IndexError, json.JSONDecodeError) as e:
-            print(f"❌ Error occurred while parsing response: {e}")
+            print(f"🚨 Error occurred while parsing response: {e} 🚨")
             print(f" `repr(content_str)` was: {repr(content_str)}")
             return {}
+
+    def _format_response(self, response: dict) -> list:
+        return list(response.values())
+
+    """
+    # @todo - old version
+    def _format_response2(self, response: dict) -> str:
+
+        csv_row_str = ""
+        csv_row = list(response.items())
+        csv_column_cnt = len(csv_row)
+
+        comma = ","
+        for idx, (key, value) in enumerate(csv_row):
+            comma = "" if idx == csv_column_cnt - 1 else comma
+            csv_row_str += f"{value}{comma}"
+
+        
+        return csv_row_str
+    """

@@ -36,11 +36,7 @@ def run_main_pipeline(args: list):
 
     # Message Reviewer
     output_rows = run_message_reviewer_pipeline(data_handler)
-
-    sys.exit(0)
     data_handler.save_output(output_rows)
-
-
 
 def parse_args(command_line_args: list[str]) -> dict:
     return {arg.strip("--"): (arg in command_line_args) for arg in ARGS_LIST}
