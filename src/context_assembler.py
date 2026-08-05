@@ -26,7 +26,7 @@ class ContextAssembler:
         self._groups = data.groups
         self._images = data.images
         self._message_history = data.message_history
-        self._message = pd.DataFrame() 
+        #self._message = pd.DataFrame() 
         self._user_business_history = data.user_business_history
         self._users = data.users
         self._voice_notes = data.voice_notes
@@ -46,8 +46,6 @@ class ContextAssembler:
         filtered_group_dataset = self._filter_by_group(filtered_dataset["group_members"], message_row.group_id)
         filtered_dataset = {**filtered_dataset, **filtered_group_dataset}
         filtered_dataset["message"] = message_row
-        
-        print(f"DBG: filtered_dataset={filtered_dataset}")
 
         # Filter by media ID
         filepath = self._get_media_filepath(message_row.media_type, message_row.media_id)
@@ -57,11 +55,6 @@ class ContextAssembler:
 
         # Load Prompt Builder to get the prompt
         builder = PromptBuilder(filtered_dataset)
-
-        print(f"prompt = {builder.prompt}")
-
-        import sys
-        sys.exit(0)
 
         return builder.prompt
 
@@ -79,6 +72,9 @@ class ContextAssembler:
             "users": self._users[self._users["user_id"] == user_id]
         }
 
+    
+
+
     def _filter_by_group(self, group_members: pd.DataFrame, group_id: str) -> dict:
         return {
             "group_members": group_members[group_members["group_id"] == group_id],
@@ -89,8 +85,6 @@ class ContextAssembler:
         """
         Get full media filepath from the root directory "dataset" based on message row columns: media_type and media_id
         """
-
-        print(f"DBG: _get_media_filepath() media_type={media_type}, media_id={media_id}")
 
         # Check columns for missing information return None if missing.
         if pd.isna(media_type) or not media_type or pd.isna(media_id) or not media_id:
@@ -109,7 +103,7 @@ class ContextAssembler:
         if media_df is not None and not media_df.empty and id_column in media_df.columns:
             filtered_media = media_df[media_df[id_column] == media_id]
             
-            if filtered_media:
+            if not filtered_media.empty:
                 # @TODO - old: raw_path = filtered_media.iloc[0].get("file_path") or filtered_media.iloc[0].get("filename")
                 media_filepath = filtered_media.iloc[0].get("file_path")
                 

@@ -2,13 +2,14 @@
 
 # Python Libraries
 import time
+import sys
 
 # Vendor Libraries
 import pandas as pd
  
 # Local Libraries
 from models.chat_processor_model import ChatProcessorModel
-from src.constants import SLEEP_TIMER
+from src.constants import PAUSE_TIMER
 from src.context_assembler import ContextAssembler
 from src.data_handler import DataHandler
 from src.utils import get_progress_bar
@@ -39,13 +40,17 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
         if row.Index == 21:
             
             prompt = assembler.build_prompt_by_user(row)
-            response = chat_model.get_response(prompt) # response is a list
+            print(f"\nDBG:prompt = {prompt}")
+            response = None #chat_model.get_response(prompt) # response is a list
+            print(f"\nDBG: response = {response}")
         
-            time.sleep(SLEEP_TIMER)
+            time.sleep(PAUSE_TIMER)
             output_rows.append(response)
 
             print(get_progress_bar(row.Index, messages_cnt))
 
     # List of output rows that need to be formatted
+    print(f"\nDBG: output_rows={output_rows}")
+    sys.exit(0)
     return output_rows
     

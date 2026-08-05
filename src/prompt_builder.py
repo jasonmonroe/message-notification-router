@@ -7,41 +7,33 @@ import textwrap
 
 # Local Libraries
 from src.constants import MAX_HISTORICAL_MESSAGES, PEP8_LINE_LEN, ROUTING_PROMPT_TEMPLATE
-
+import sys
 class PromptBuilder:
     def __init__(self, dataset: dict):
         """
         Builds full prompt by including placeholder strings in the appropriate areas.
 
-        """
-
-        """
         filtered dataset:
-            "business_accounts" 
-            "group_members" 
-            "message_history" 
-            "users":  
-            "user_business_history": 
+            - business_accounts
+            - group_members
+            - message_history
+            - users
+            - user_business_history 
         """
 
-        self.business_accounts = None #
-        #self.business_id = None ##
-        #self.group_id = None ##
-        self.group_members = None #
+        self.business_accounts = None
+        self.group_members = None
         self.media_description = None
-        self.media_filename = None      # <== image_id or voice_note_id
-        self.media_filepath = None #
-        #self.media_type = None ##
-        self.message_history = None #
-        #self.message_id = None ##
-        self.message = None ### message row
+        self.media_filename = None
+        self.media_filepath = None
+        self.message_history = None
+        self.message = None
         self.prompt = ""
-        self.user_business_history = None #
-        #self.user_id = None ##
-        self.users = None #
+        self.user_business_history = None
+        self.users = None
 
         self._set_attrs(dataset)
-
+        
         self.prompt = self.build(dataset.get("groups"))
 
     def _set_attrs(self, dataset: dict) -> None:
@@ -49,10 +41,10 @@ class PromptBuilder:
             if hasattr(self, key):
                 setattr(self, key, value)
 
-    def build(self, groups: pd.DataFrame):
-
-        self.prompt = ROUTING_PROMPT_TEMPLATE.format(
-            business_id=self.message.business_id,
+    def build(self, groups: pd.DataFrame) -> str:
+     
+        return ROUTING_PROMPT_TEMPLATE.format(
+            business_id=self.message.business_id if pd.notna(self.message.business_id) else "None",
             business_sender_context=self._format_business_sender(),
             group_id=self.message.group_id,
             group_metadata_context=self._format_group_metadata(groups),
@@ -85,7 +77,7 @@ class PromptBuilder:
                     - Business Name: {business_row.get('brand_name', self.message.business_id)}
                     - Category: {business_row.get('category', 'Unknown')}
                     - Verified: {business_row.get('is_verified', 'Unknown')}
-                    - Sender Domain: {business_row.get('domain', 'Unknown')}\
+                    - Sender Domain: {business_row.get('domain', 'Unknown')}
                 """).strip()
             else:
                 business_info = f"- Business ID: {self.message.business_id} (No extended metadata found)"
@@ -110,24 +102,16 @@ class PromptBuilder:
 
         business_info = _get_business_info(business_df)
         history_info = _get_history_info(business_history_df)    
-
+       
         return f"{business_info}\n{history_info}".strip()
 
     def _format_group_metadata(self, groups_df: pd.DataFrame) -> str:
         # Filter for the target group
-        #group_df = groups[groups["group_id"] == self.group_id]
-
-        #group_members = self.group_members
-        
-        # Filter for the specific user's membership in that group
-        # @TODO - is this even necessary?
         group_members_row = self.group_members[
             (self.group_members["group_id"] == self.message.group_id) & 
             (self.group_members["user_id"] == self.message.user_id)
         ]
         
-        print(f"DBG: group_members_row = {group_members_row}")
-
         if group_members_row.empty:
             return "No group membership data found for this user."
             
@@ -146,7 +130,7 @@ class PromptBuilder:
             - Group Name: {group_name}
             - Group Type: {group_type}
             - User Role: {role}
-            - Muted by User: {muted_by_user}\
+            - Group Muted by User: {muted_by_user}
         """).strip()
 
     def _format_historical_evidence(self) -> str:
@@ -183,12 +167,12 @@ class PromptBuilder:
             - Created At: {created_at}
             - Message Text: {message_text}
             - Media Type: {media_type}
-            - Forwarded Count: {forwarded_count}\            
+            - Forwarded Count: {forwarded_count}           
         """).format(
                 message_id=self.message.message_id,
                 conversation_type=self.message.conversation_type,
                 group_id=group_id,
-                sender_id_or_business_id=sender_or_business_id,
+                sender_or_business_id=sender_or_business_id,
                 user_id=self.message.user_id,
                 created_at=self.message.created_at,
                 message_text=message_text,
@@ -208,7 +192,7 @@ class PromptBuilder:
             - 30-Day Stats: {messages_opened_30d} opened, {messages_replied_30d} replied, {notifications_dismissed_30d} dismissed, {messages_reported_30d} reported.\
         """).format(
             do_not_disturb_window=user_row.get("do_not_disturb_window", "None"),
-            message_opened_30d=user_row.get("messages_opened_30d", 0),
+            messages_opened_30d=user_row.get("messages_opened_30d", 0),
             messages_replied_30d=user_row.get("messages_replied_30d", 0),
             messages_reported_30d=user_row.get("messages_reported_30d", 0),
             notifications_dismissed_30d=user_row.get("notifications_dismissed_30d", 0),

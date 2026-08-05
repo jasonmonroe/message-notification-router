@@ -28,11 +28,10 @@ from src.utils import gen_run_id, show_banner, show_timer, start_timer
 
  
 def run_main_pipeline(args: list):
-    print(f"args={args}")
-
     show_banner(f"{APP_NAME}")
     
     data_handler = run_data_pipeline(args)
+    sys.exit(0)
     output_rows = run_message_reviewer_pipeline(data_handler)
     data_handler.save_output(output_rows)
 

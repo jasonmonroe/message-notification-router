@@ -9,16 +9,14 @@ import os
 # Vendor Libraries
 import pandas as pd
 import numpy as np
-from tinytag import TinyTag
+from tinytag import TinyTag, ParseError
 
 # Local Libraries
 from src.constants import (
-    #AUDIO_DIR, 
     AUDIO_SAMPLE_RATE, 
     CSV_FILENAMES,
     CSV_HEADER_COLS,
     DATASET_DIR, 
-    #IMAGES_DIR,
     MSEC,
     OUTPUT_FILEPATH,
 )
@@ -45,8 +43,6 @@ class DataHandler:
         self._load()
 
     def _load(self) -> None:
-        print("Loading text files...")
-        
         for csv_name in CSV_FILENAMES:
             filepath = os.path.join(DATASET_DIR, f"{csv_name}.csv")
             setattr(self, csv_name, pd.read_csv(filepath))
@@ -63,76 +59,96 @@ class DataHandler:
             writer.writerows(csv_rows.copy())           
 
     def describe_audio(self) -> None:
-        if not self.voice_notes:
+        if self.voice_notes.empty:
             print("\n⚠️ Warning: No audio files loaded...")
             return None
-
-        subtitles = []
-        for idx, voice_note_id, file_path in enumerate(self.voice_notes):
-            if not os.path.isfile(file_path):
+        
+        subtitles = [f"Audio File Count: {len(self.voice_notes)}"]
+        show_banner(f"🔈 Describe Audio Data 🔈", subtitles)
+    
+        for row in self.voice_notes.itertuples():
+            subtitles = []
+            voice_note_id = row.voice_note_id
+            file_path = row.file_path
+            
+            voice_note_filepath = os.path.join(DATASET_DIR, file_path)
+            if not os.path.isfile(voice_note_filepath):
+                print(f"\n⚠️ {voice_note_filepath} not a file.")
                 continue
-
-            subtitles.append("\n🔈 Audio File {idx}")
-            subtitles.append(f"ℹ️Filename: {voice_note_id}")
-            subtitles.append(f"ℹ️Filepath: {file_path}")
+            
+            subtitles.append(f"ℹ️ Filename: {voice_note_id}")
+            subtitles.append(f"ℹ️ Filepath: {voice_note_filepath}")
 
             # Convert to audio file to audio data
-            audio_data, sr = lr.load(file_path, sr=AUDIO_SAMPLE_RATE)
-            audio_duration = lr.get_duration(y=audio_data, sr=sr)
-            subtitles.append(f"ℹ️Duration: {audio_duration} seconds")
-            subtitles.append(f"ℹ️ Shape: {audio_data.shape}")
+            voice_note_data, sr = lr.load(voice_note_filepath, sr=AUDIO_SAMPLE_RATE)
+            voice_note_duration = lr.get_duration(y=voice_note_data, sr=sr)
+            subtitles.append(f"ℹ️ Duration: {voice_note_duration} seconds")
+            subtitles.append(f"ℹ️ Shape: {voice_note_data.shape}")
 
             # Audio Metadata
-            audio_tag = TinyTag.get(file_path)
+            try:
+                voice_note_tag = TinyTag.get(voice_note_filepath)
+            except (ParseError, Exception) as e:
+
+                # Fallback if audio file is currupted and can not be analyzed.
+                print(f"\n⚠️ Warning: Could not parse audio file {voice_note_filepath}: {e}")
+                continue
 
             subtitles.append("--- Basic Properties ---")
-            subtitles.append(f"ℹ️Filesize: {audio_tag.filesize} bytes")
-            subtitles.append(f"ℹ️Audio Offset: {audio_tag.audio_offset}")
-            subtitles.append(f"ℹ️Bitrate: {audio_tag.bitrate} kbps")
-            subtitles.append(f"ℹ️Sample Rate: {audio_tag.samplerate} Hz")
-            subtitles.append(f"ℹ️Channels: {audio_tag.channels}")
-            subtitles.append(f"ℹ️Bit Depth: {audio_tag.bitdepth}")
+            subtitles.append(f"ℹ️ Filesize: {voice_note_tag.filesize} bytes")
+            subtitles.append(f"ℹ️ Audio Offset: {voice_note_tag.audio_offset}")
+            subtitles.append(f"ℹ️ Bitrate: {voice_note_tag.bitrate} kbps")
+            subtitles.append(f"ℹ️ Sample Rate: {voice_note_tag.samplerate} Hz")
+            subtitles.append(f"ℹ️ Channels: {voice_note_tag.channels}")
+            subtitles.append(f"ℹ️ Bit Depth: {voice_note_tag.bitdepth}")
 
             subtitles.append("\n--- ID3 / Tag Metadata ---")
-            subtitles.append(f"ℹ️Title: {audio_tag.title}")
-            subtitles.append(f"ℹ️Artist: {audio_tag.artist}")
-            subtitles.append(f"ℹ️Album Artist: {audio_tag.albumartist}")
-            subtitles.append(f"ℹ️Album: {audio_tag.album}")
-            subtitles.append(f"ℹ️Composer: {audio_tag.composer}")
-            subtitles.append(f"ℹ️Track Number: {audio_tag.track}")
-            subtitles.append(f"ℹ️Track Total: {audio_tag.track_total}")
-            subtitles.append(f"ℹ️Disc Number: {audio_tag.disc}")
-            subtitles.append(f"ℹ️Disc Total: {audio_tag.disc_total}")
-            subtitles.append(f"ℹ️Year / Date: {audio_tag.year}")
-            subtitles.append(f"ℹ️Genre: {audio_tag.genre}")
-            subtitles.append(f"ℹ️Comment: {audio_tag.comment}")
+            subtitles.append(f"ℹ️ Title: {voice_note_tag.title}")
+            subtitles.append(f"ℹ️ Artist: {voice_note_tag.artist}")
+            subtitles.append(f"ℹ️ Album Artist: {voice_note_tag.albumartist}")
+            subtitles.append(f"ℹ️ Album: {voice_note_tag.album}")
+            subtitles.append(f"ℹ️ Composer: {voice_note_tag.composer}")
+            subtitles.append(f"ℹ️ Track Number: {voice_note_tag.track}")
+            subtitles.append(f"ℹ️ Track Total: {voice_note_tag.track_total}")
+            subtitles.append(f"ℹ️ Disc Number: {voice_note_tag.disc}")
+            subtitles.append(f"ℹ️ Disc Total: {voice_note_tag.disc_total}")
+            subtitles.append(f"ℹ️ Year / Date: {voice_note_tag.year}")
+            subtitles.append(f"ℹ️ Genre: {voice_note_tag.genre}")
+            subtitles.append(f"ℹ️ Comment: {voice_note_tag.comment}")
 
             # Additional helper attributes TinyTag provides:
             subtitles.append("\n--- Additional Info ---")
-            subtitles.append(f"ℹ️File Format: {audio_tag.file_format}")
-            subtitles.append(f"ℹ️Is Lossless?: {audio_tag.is_lossless}")
-
-        show_banner(f"🔈 Describe Audio Data ({len(self.voice_notes)}) 🔈", subtitles)
+            subtitles.append(f"ℹ️ File Format: {os.path.splitext(voice_note_filepath)[1]}")
+            subtitles.append(f"ℹ️ Is Lossless?: {voice_note_tag.is_lossless}")
+        
+            show_banner(f"🔈 Audio File {row.Index}", subtitles)
 
     def describe_images(self) -> None:
-        if not self.images:
+        if self.images.empty:
             print("\n⚠️ Warning: No images loaded.")
             return None
 
-        subtitles = []
-        for idx, image_id, file_path in enumerate(self.images):
-            if not os.path.isfile(file_path):
+        subtitles = [f"Image File Count: {len(self.images)}"]
+        show_banner(f"🏞️ Describe Images 🏞️", subtitles)
+
+        for row in self.images.itertuples():
+            subtitles = []
+            image_id = row.image_id
+            file_path = row.file_path
+            image_filepath = os.path.join(DATASET_DIR, file_path)
+
+            if not os.path.isfile(image_filepath):
+                print(f"\n⚠️ {image_filepath} is not a file.")
                 continue
 
-            subtitles.append(f"🏞️ Image {idx}")
             subtitles.append(f"ℹ️ Filename: {image_id}")
-            subtitles.append(f"ℹ️ Filesize: {os.path.getsize(image_id)}")
+            subtitles.append(f"ℹ️ Filesize: {os.path.getsize(image_filepath)}")
 
             # Convert to image data
-            image_data = cv2.imread(file_path)
+            image_data = cv2.imread(image_filepath)
 
-            if not image_data:
-                subtitles.append(f"⚠️ Warning: Failed to load image at {file_path}.")
+            if image_data is None:
+                subtitles.append(f"\n⚠️ Warning: Failed to load image at {image_filepath}.")
                 continue
 
             height, width, channels = image_data.shape
@@ -141,14 +157,14 @@ class DataHandler:
             subtitles.append(f"ℹ️ Total Pixels:{image_data.size}") # Total number of elements
             subtitles.append(f"ℹ️ Data Type:{image_data.dtype}") # Usually uint8 (8-bit pixels)
 
-            cv2.imshow(image_id, image_data)
+            show_banner(f"🏞️ Image {row.Index}", subtitles)
+
+            cv2.imshow(f"{row.Index} - {image_id}", image_data)
 
             # Delay x miliseconds before closing image
             cv2.waitKey(MSEC)
             cv2.destroyAllWindows()
         
-        show_banner(f"🏞️ Describe Image Data ({len(self.images)}) 🏞️", subtitles)
-
     def describe(self) -> None:
         sample_text = "Sample" if self._use_sample else ""
 

@@ -30,9 +30,9 @@ class ChatProcessorModel:
             f"📄️DATA ROWS: {row_cnt}"
         ]
 
-        show_banner(self.name.upper(), subtitles)
-
         self.name = "WhatsApp Chat Processing Model"
+        show_banner(self.name.upper(), subtitles)
+        
         self._client = self._load_model(row_cnt)
 
     def _load_model(self, row_cnt:int) -> OpenAI:
