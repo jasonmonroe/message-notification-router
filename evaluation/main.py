@@ -34,12 +34,15 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     output_rows = []
     for row in messages_df.itertuples():
-        if row.Index >= 0:
-            print(f"\n----- {row.Index} -----")
+        if row.Index == 0:
+            print(f"\n---- {row.Index} ----")
+            print(f"message_id={row.message_id}")
             start_time = start_timer()
             prompt = assembler.build_prompt_by_user(row)
             print(f"\nDBG:prompt len= ({len(prompt)})")
             print(f"{prompt}")
+            print(f"\n----- {row.Index} -----")
+
             continue
             #sys.exit(0)
             response = chat_model.get_response(prompt, row.Index) # response is a list

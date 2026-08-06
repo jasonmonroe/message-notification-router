@@ -46,6 +46,7 @@ class PromptBuilder:
                 setattr(self, key, value)
 
     def build(self, groups: pd.DataFrame) -> str:
+
         return ROUTING_PROMPT_TEMPLATE.format(            
             business_sender_context=self._format_business_sender_xml(),
             group_metadata_context=self._format_group_metadata_xml(groups),
@@ -59,16 +60,12 @@ class PromptBuilder:
     # --- Format Attributes --- #
 
     def _format_incoming_message_xml(self) -> str:
-        group_id = self.message.get("group_id") if pd.notna(self.message.get("group_id")) else "None"
-        sender_or_business_id = self.message.get("business_id") if pd.notna(self.message.get("business_id")) else (self.message.get("send_user_id") if pd.notna(self.message.get("send_user_id")) else "None")
+        group_id = self.message.get("group_id") if pd.notna(self.message.get("group_id")) and self.message.get("group_id").strip() else ""
+        sender_or_business_id = self.message.get("business_id") if pd.notna(self.message.get("business_id")) else (self.message.get("send_user_id") if pd.notna(self.message.get("send_user_id")) else "")
         message_text = self.message.get("message_text") if pd.notna(self.message.get("message_text")) else "[Media Message]"
         media_type = self.message.get("media_type") if pd.notna(self.message.get("media_type")) else "None"
-
-        return """
-        <incoming_message id="{message_id}" conversation_type="{conversation_type}" group_id="{group_id}" sender_id="{sender_or_business_id}" target_user_id="{user_id}" created_at="{created_at}" media_type="{media_type}" forwarded_count="{forwarded_count} ">
-            <message_text>{message_text}</message_text>
-        </incoming_message>
-        """.strip().format(
+         
+        return """<incoming_message id="{message_id}" conversation_type="{conversation_type}" group_id="{group_id}" sender_id="{sender_or_business_id}" target_user_id="{user_id}" created_at="{created_at}" media_type="{media_type}" forwarded_count="{forwarded_count} ">\n\t<message_text>{message_text}</message_text>\n</incoming_message>""".strip().format(
             message_id=self.message.get("message_id"),
             conversation_type=self.message.get("conversation_type"),
             group_id=group_id,
@@ -93,22 +90,19 @@ class PromptBuilder:
             if business_df is not None and not business_df.empty:
                 business_row = business_df.iloc[0]
 
-                business_info = """
-                <business_sender id="{business_id}" name="{name}" category="{category}" verified="{verified}" sender_domain="{sender_domain}">
-                <interactions>
-                """.strip().format(
+                business_info = """<business_sender id="{business_id}" name="{name}" category="{category}" verified="{verified}" sender_domain="{sender_domain}">""".strip().format(
                     business_id=self.message.get("business_id"),
                     name=business_row.get("display_name", self.message.get("brand_name")),
                     category=business_row.get("category"),
                     verified="true" if business_row.get("verified") == 1 else "false",
-                    sender_domain=business_row.get("domain_used_by_sender", "Unknown"),
+                    sender_domain=business_row.get("domain_used_by_sender", ""),
                 )
 
             return business_info
 
         def _get_history_info_xml(business_history_df: pd.DataFrame) -> str:
-            history_info_xml = ""
 
+            history_info_xml = ""
             if business_history_df is not None and not business_history_df.empty:
 
                 # Filter history for this specific business/user if needed, 
@@ -117,8 +111,8 @@ class PromptBuilder:
                 for _, row in business_history_df.iterrows():
                     # Use real columns present in your dataset rows: action, message_type, created_at     
                     xml_content = """<interaction user_id="{user_id}" relation="{why_user_knows_account}" last_reply_at="{last_reply_at}" last_activity="{last_activity_at}"/>""".strip().format(
-                        last_activity_at=row.get("last_activity_at") if row.get("last_activity_at") else "unknown",
-                        last_reply_at=row.get("last_reply_at") if row.get("last_reply_at") else "unknown",
+                        last_activity_at=row.get("last_activity_at") if row.get("last_activity_at") else "",
+                        last_reply_at=row.get("last_reply_at") if pd.notna(row.get("last_reply_at")) and str(row.get("last_reply_at")).strip() else "",
                         user_id=row.get("user_id"),
                         why_user_knows_account=row.get("why_user_knows_account"),
                     )
@@ -130,15 +124,11 @@ class PromptBuilder:
            
             return history_info_xml
 
-
         business_info_xml_open = _get_business_info_xml_open(business_df)
-        history_info_xml = _get_history_info_xml(business_history_df) # interactions    
-        business_info_xml_close = "</interactions></business_sender>"
+        history_info_xml = _get_history_info_xml(business_history_df)
+        business_info_xml_close = "</business_sender>\n"
 
-        return f"""
-        {business_info_xml_open}
-            {history_info_xml}
-        {business_info_xml_close}""".strip() 
+        return f"""{business_info_xml_open}\n\t<interactions>\n\t\t{history_info_xml}\n\t</interactions>\n{business_info_xml_close}\n""".strip() 
 
     def _format_group_metadata_xml(self, groups_df: pd.DataFrame) -> str:
         # Filter for the target group
@@ -150,7 +140,7 @@ class PromptBuilder:
         # No group membership data found for this user.
         if group_members_row.empty:
             return ""
-            
+        
         # Extract user-specific data
         group_muted_by_user = group_members_row["group_muted_by_user"].iloc[0]
         muted_by_user = "Muted" if group_muted_by_user == 1 else "Unmuted"
@@ -161,14 +151,11 @@ class PromptBuilder:
         group_type = groups_df["group_type"].iloc[0] if not groups_df.empty and "group_type" in groups_df else "unknown"
         
         # Formats as a clean, vertical, token-optimized markdown list
-        return """
-        <group_metadata id="{group_id}" type="{group_type}" user_role="{group_user_role}" user_mute_status="{group_muted_by_user}">
-            <group_name>{group_name}</group_name>
-        </group_metadata>
-        """.strip().format(
+        return """<group_metadata id="{group_id}" type="{group_type}" user_role="{group_user_role}" joined_at="{group_joined_at}" user_mute_status="{group_muted_by_user}">\n\t<group_name>{group_name}</group_name>\n</group_metadata>""".strip().format(
             group_id=self.message.get("group_id"),
             group_name=group_name,
             group_type=group_type,
+            group_joined_at=group_members_row["joined_at"].iloc[0],
             group_user_role=group_user_role,
             group_muted_by_user=muted_by_user,
         )
@@ -186,25 +173,24 @@ class PromptBuilder:
        
         xml_messages = []
         for _, row in recent_history.iterrows():
-            xml_message = """\t<message id="{message_id}" date="{created_at}">{message_text}</message>""".strip().format(
+            message_text = row.get("message_text") if pd.notna(row.get("message_text")) and str(row.get("message_text")).strip() else ""
+    
+            xml_message = """<message id="{message_id}" date="{created_at}">{message_text}</message>""".strip().format(
                 message_id=row.get("message_id"),
                 created_at=row.get("created_at"),
-                message_text=str(row.get("message_text", "")).strip()
+                message_text=message_text.strip(),
             )
-            xml_messages.append(xml_message)
 
+            xml_messages.append(f"\t{xml_message}")
+       
         xml_content = "\n".join(xml_messages)
         
-        return f"{xml_open}{xml_content}{xml_close}"
+        return f"{xml_open}\n{xml_content}\n{xml_close}"
 
     def _format_media_context_xml(self) -> str:
         if self.media_description:
-            return """
-                <media_attachment>
-                    <metadata type="{media_type}" filename="{media_filename}" />
-                    <description>{media_content_description}</description>
-                </media_attachment>
-                """.strip().format(
+            return """<media_attachment status="optional">\n\t<metadata id="{media_id}" type="{media_type}" filename="{media_filename}" />\n\t<description>{media_content_description}</description>\n</media_attachment>""".strip().format(
+                    media_id=self.message.get("media_id"),
                     media_type=self.message.get("media_type"),
                     media_filename=os.path.basename(self.media_filepath),
                     media_content_description=self.media_description.strip(),
@@ -219,11 +205,7 @@ class PromptBuilder:
         
         user = self.users.iloc[0]
 
-        return """
-        <recipient_user id="{user_id}" dnd_window="{do_not_disturb_window}">
-            <stats thirty_day_opened="{messages_opened_30d}" thirty_day_replied="{messages_replied_30d}" thirty_day_dismissed="{messages_reported_30d}" thirty_day_reported="{notifications_dismissed_30d}" />
-        </recipient_user>
-        """.strip().format(
+        return """<recipient_user id="{user_id}" type="recipient" dnd_window="{do_not_disturb_window}">\n\t<stats thirty_day_opened="{messages_opened_30d}" thirty_day_replied="{messages_replied_30d}" thirty_day_dismissed="{messages_reported_30d}" thirty_day_reported="{notifications_dismissed_30d}" />\n</recipient_user>""".strip().format(
             do_not_disturb_window=user.get("do_not_disturb_window", "None"),
             messages_opened_30d=user.get("messages_opened_30d", 0),
             messages_replied_30d=user.get("messages_replied_30d", 0),

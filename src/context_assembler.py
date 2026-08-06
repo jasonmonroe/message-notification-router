@@ -166,7 +166,7 @@ class ContextAssembler:
             # Transcribe the audio file path
             result = base_model.transcribe(audio_filepath)
             
-            return "- Audio Transcription: " + result["text"].strip()
+            return "Audio Transcription: " + result["text"].strip()
         
         except Exception as g:
             print(f"❌ Error transcribing audio: {g}")
@@ -190,7 +190,7 @@ class ContextAssembler:
         extracted_text = pytesseract.image_to_string(thresh).strip()
         
         if len(extracted_text) > 0:
-            return "- Extracted Image Text (OCR): " + extracted_text
+            return "Extracted Image Text (OCR): " + extracted_text
         
         # Fallback if the image contains no readable text (e.g. standard photo)
-        return "- Image Description: Attached photograph/image file (No embedded text detected)."
+        return "Image Description: Attached photograph/image file (No embedded text detected)."

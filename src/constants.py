@@ -67,7 +67,7 @@ SYSTEM_INSTRUCTIONS = """
 You are a machine learning expert with extensive knowledge in multimodal prompts for an AI-powered system such as WhatsApp that decides which messages deserve immediate attention, which should wait, and which should be muted.
 
 ## CRITICAL EXECUTION RULES:
-1. Analyze text data, user context, group metadata, and history together to make a routing determination.
+1. Analyze xml data that consists of messages, user context, business context, group metadata, history and media attachments (if available) together to make a routing determination.
 2. You must output your final routing determination strictly as a valid JSON object matching the requested schema, using exact action values: 'notify', 'digest', or 'mute'.
 ---
 
@@ -85,6 +85,10 @@ Evaluate your certainty for the chosen action on a scale from 0.0 to 1.0:
 """.strip()
 
 ROUTING_PROMPT_TEMPLATE = """
+
+## USER - BUSINESS MESSAGE DATA
+
+<context>
 {incoming_message_context}
 
 {business_sender_context}
@@ -96,6 +100,7 @@ ROUTING_PROMPT_TEMPLATE = """
 {historical_evidence}
 
 {media_context}
+</context>
 
 ## TASK INSTRUCTION
 Analyze the incoming message, user preferences, sender verification, and history. 
@@ -106,7 +111,9 @@ Decide whether this message should be:
 3. `mute` (suppress as low-value, repetitive, or unsafe)
  
 CRITICAL OUTPUT REQUIREMENT:
-Return your response as a valid JSON object wrapped inside a markdown code block (```json ... ```) matching this exact schema:
+Return your response as a valid JSON object wrapped inside a markdown code block (```json ... ```). 
+
+**The JSON structure below is a template/blueprint.** Do not use the sample IDs or values from it. Populate all keys using the *actual data, IDs, and decisions* derived from the prompt context above:
 
 {{
     "message_id": "sample_msg_041",
@@ -117,7 +124,7 @@ Return your response as a valid JSON object wrapped inside a markdown code block
     "evidence_message_ids": ["message_0046"] 
 }}
 
-** IMPORTANT: 
-1. JSON object keys must be in this order. Do not deviate! **
-2. Replace the placeholder values above with the actual data and IDs from the current context.
+**IMPORTANT RULES:**
+1. JSON object keys must be in the exact order shown above. Do not deviate!
+2. Replace all placeholder values with real data from the current context.
 """.strip()
