@@ -85,22 +85,22 @@ Evaluate your certainty for the chosen action on a scale from 0.0 to 1.0:
 """.strip()
 
 ROUTING_PROMPT_TEMPLATE = """
-
 ## USER - BUSINESS MESSAGE DATA
 
 <context>
-{incoming_message_context}
+    {incoming_message_context}
 
-{business_sender_context}
+    {business_sender_context}
 
-{recipient_user_context}
+    {recipient_user_context}
 
-{group_metadata_context}
+    {group_metadata_context}
 
-{historical_evidence}
+    {historical_evidence}
 
-{media_context}
+    {media_context}
 </context>
+
 
 ## TASK INSTRUCTION
 Analyze the incoming message, user preferences, sender verification, and history. 

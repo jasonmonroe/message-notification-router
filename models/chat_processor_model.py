@@ -90,11 +90,10 @@ class ChatProcessorModel:
 
             if rate_limit_ctr >= RATE_LIMIT_RETRIES:
                 print(f"\n🚨 Idx: {row_index} | {self.name} request has exceeded the maximum amount of retries! Returning None. 🚨")
-                return {}
+                return {"error": True}
 
             # You can parse the retry delay or default to a safe pause
             rate_limit_ctr += 1
-
             delay_time = self._parse_delay_time(error_message)
             
             time.sleep(delay_time)
