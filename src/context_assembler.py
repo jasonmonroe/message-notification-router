@@ -25,7 +25,6 @@ class ContextAssembler:
     """
     def __init__(self, data) -> None:
         self._business_accounts = data.business_accounts
-        self._business_id = None
         self._group_members = data.group_members
         self._groups = data.groups
         self._images = data.images
@@ -43,34 +42,43 @@ class ContextAssembler:
         """
 
         # Get filtered dataset to usein the prompt generation
-        filtered_dataset = self._filter_by_user(message_row.user_id)
+        filtered_dataset = self._filter_by_user(message_row.user_id, message_row.business_id)
 
         # Filter by group ID, note: group_members has already been filtered by user so we just need to filter by group_id
         filtered_group_dataset = self._filter_by_group(filtered_dataset["group_members"], message_row.group_id)
-        filtered_dataset = {**filtered_dataset, **filtered_group_dataset}
-        filtered_dataset["message"] = message_row
-
+        filtered_dataset |= filtered_group_dataset
+        
         # Filter by media ID
-        filepath = self._get_media_filepath(message_row.media_type, message_row.media_id)
-        if filepath:
-            filtered_dataset["media_filepath"] = filepath
-            filtered_dataset["media_context"] = self._get_media_context(message_row.media_type, filepath)
+        media_filepath = self._get_media_filepath(message_row.media_type, message_row.media_id)
+        if media_filepath:
+            filtered_dataset["media_filepath"] = media_filepath
+            filtered_dataset["media_description"] = self._get_media_description(message_row.media_type, media_filepath)
+
+        filtered_dataset["message"] = self._clean_message(message_row)
 
         # Load Prompt Builder to get the prompt
         builder = PromptBuilder(filtered_dataset)
 
         return builder.prompt
 
-    def _filter_by_user(self, user_id: str) -> dict:
-        # Filter user business history
+    def _filter_by_user(self, user_id: str, business_id: str) -> dict:
+        # Filter user business history by the user and the business.
         user_business_history = self._user_business_history[self._user_business_history["user_id"] == user_id]
-        user_business_ids = user_business_history["business_id"].tolist()   
-        business_accounts = self._business_accounts[self._business_accounts["business_id"].isin(user_business_ids)] if user_business_ids else pd.DataFrame()
-   
+        message_history = self._message_history[self._message_history["user_id"] == user_id]
+        business_accounts = self._business_accounts
+
+        if pd.notna(business_id) and business_id:
+            user_business_history = user_business_history[user_business_history["business_id"] == business_id]
+
+            # Now that we have filtered the user_business_history by user_id and business_id get the business accounts 
+            # this user has interacted with.
+            business_accounts = self._business_accounts[self._business_accounts["business_id"] == business_id]
+            message_history = message_history[message_history["business_id"] == business_id]
+        
         return { 
             "business_accounts": business_accounts,
             "group_members": self._group_members[self._group_members["user_id"] == user_id],
-            "message_history": self._message_history[self._message_history["user_id"] == user_id],
+            "message_history": message_history,
             "user_business_history": user_business_history,
             "users": self._users[self._users["user_id"] == user_id]
         }
@@ -83,8 +91,7 @@ class ContextAssembler:
 
     def _get_media_filepath(self, media_type: str, media_id: str) -> str | None:
         """
-        Get full media filepath from the root directory "dataset" based on message
-        row columns: media_type and media_id
+        Get full media filepath from the root directory "dataset" based on message row columns: media_type and media_id
         """
 
         # Check columns for missing information return None if missing.
@@ -114,11 +121,19 @@ class ContextAssembler:
 
         return None
 
-    def _get_media_context(self, media_type: str, media_filepath: str) -> str:
-        """
-        ## MEDIA ATTACHMENT CONTEXT (Type: {media_type}, File: {media_filename})
-        {media_content_description}
+    def _clean_message(self, message_row: pd.DataFrame) -> pd.DataFrame:
+        message_dict = message_row._asdict()
 
+        # Clean out the nan values, replacing them with empty strings
+        cleaned_dict = {
+            key: ("" if pd.isna(value) else value) 
+            for key, value in message_dict.items()
+        }
+
+        return cleaned_dict
+
+    def _get_media_description(self, media_type: str, media_filepath: str) -> str | None:
+        """
         For Voice Notes / Audio: 
             Pass the transcription of the audio file (if you have an automatic speech-to-text 
             step or dataset column) so the model can read what was said.
@@ -130,20 +145,6 @@ class ContextAssembler:
         If none, remove it entirely otherwise get the description and build the context around it.
         """
 
-        def _include_media_context(media_type: str, media_filename: str, media_content_description: str) -> str:
-            return """
-            <media_attachment>
-                <metadata type="{media_type}" filename="{media_filename}" />
-                <description>
-                    {media_content_description}
-                </description>
-            </media_attachment>
-            """.strip().format(
-                media_type=media_type,
-                media_filename=media_filename,
-                media_content_description=media_content_description,
-            )
-
         description = None
 
         if media_type == "image":   
@@ -152,11 +153,8 @@ class ContextAssembler:
         elif media_type == "voice":
             description = self._transcribe_audio_file(media_filepath)
 
-        if description:
-            return _include_media_context(media_type, os.path.basename(media_filepath), description)
+        return description
 
-        return ""
-        
     def _transcribe_audio_file(self, audio_filepath: str) -> str:
         """
         Loads a local audio file and transcribes it into text using OpenAI Whisper.

@@ -77,11 +77,11 @@ class ChatProcessorModel:
             return self._format_response(self._filter_response(response))
         
         except InternalServerError as e:
-            print(f"🚨 Idx: {row_index} {self.name} Server error encountered (503/5xx): {e} 🚨")
+            print(f"🚨 Idx: {row_index} | {self.name} Server error encountered (503/5xx): {e} 🚨")
             return {}  # Return safe empty list so downstream code doesn't crash on None
         
         except RateLimitError as e:
-            print(f"\n🚨 Idx: {row_index} Rate limit / Quota exceeded (429) on attempt: {rate_limit_ctr}. 🚨")
+            print(f"\n🚨 Idx: {row_index} | Rate limit / Quota exceeded (429) on attempt: {rate_limit_ctr}. 🚨")
 
             body = e.body[0] if isinstance(e.body, list) else e.body
             error_message = body.get("error", {}).get("message", [])
@@ -89,19 +89,18 @@ class ChatProcessorModel:
             print(f"🚨 {error_message} 🚨")
 
             if rate_limit_ctr >= RATE_LIMIT_RETRIES:
-                print(f"\n🚨 Idx: {row_index} {self.name} request has exceeded the maximum amount of retries! Returning None. 🚨")
+                print(f"\n🚨 Idx: {row_index} | {self.name} request has exceeded the maximum amount of retries! Returning None. 🚨")
                 return {}
 
             # You can parse the retry delay or default to a safe pause
             rate_limit_ctr += 1
 
             delay_time = self._parse_delay_time(error_message)
-            print(f"_get_delay_time returns{delay_time}")
- 
+            
             time.sleep(delay_time)
 
         except Exception as e:
-            print(f"\n🚨 Idx: {row_index} {self.name} Unexpected API error occurred: {e} 🚨")
+            print(f"\n🚨 Idx: {row_index} | {self.name} Unexpected API error occurred: {e} 🚨")
             return {}
 
     def _parse_delay_time(self, error_message: str) -> int | float:
@@ -119,7 +118,6 @@ class ChatProcessorModel:
         end_pos = err.find(end_char, start_pos)
 
         delay_time_str = err[start_pos:end_pos]
-        print(f"delay_time_str={delay_time_str}")
         delay_time = float(delay_time_str.replace("s", ""))
 
         # Just in case the vendor's delay time is long we will override it.

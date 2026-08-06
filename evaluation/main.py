@@ -34,26 +34,29 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     output_rows = []
     for row in messages_df.itertuples():
-        print(f"\n----- {row.Index} -----")
-        start_time = start_timer()
-        prompt = assembler.build_prompt_by_user(row)
-        print(f"\nDBG:prompt len= ({len(prompt)})")
-        print(f"{prompt}")
-        response = chat_model.get_response(prompt, row.Index) # response is a list
+        if row.Index >= 0:
+            print(f"\n----- {row.Index} -----")
+            start_time = start_timer()
+            prompt = assembler.build_prompt_by_user(row)
+            print(f"\nDBG:prompt len= ({len(prompt)})")
+            print(f"{prompt}")
+            continue
+            #sys.exit(0)
+            response = chat_model.get_response(prompt, row.Index) # response is a list
 
-        if response is None:
-            print(f"No response was given due to an error.  Breaking loop at index {row.Index}.")
-            break
-        print(f"\nDBG: response = {response}")
-        show_timer(start_time)
-        print(f"Pause {PAUSE_TIMER} seconds.")
-        time.sleep(PAUSE_TIMER)
-        output_rows.append(response)
+            if response is None:
+                print(f"No response was given due to an error.  Breaking loop at index {row.Index}.")
+                break
+            print(f"\nDBG: response = {response}")
+            show_timer(start_time)
+            print(f"Pause {PAUSE_TIMER} seconds.")
+            time.sleep(PAUSE_TIMER)
+            output_rows.append(response)
 
-        print(get_progress_bar(row.Index, messages_cnt))
+            print(get_progress_bar(row.Index, messages_cnt))
 
     # List of output rows that need to be formatted
     print(f"\nDBG: output_rows={output_rows}")
-
+    sys.exit(0)
     return output_rows
     

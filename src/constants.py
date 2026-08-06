@@ -84,22 +84,6 @@ Evaluate your certainty for the chosen action on a scale from 0.0 to 1.0:
 - General chat, promotional broadcasts, or automated alerts from a muted group must remain 'muted' or sent to 'digest'.
 """.strip()
 
-
-"""
-🎯 The Optimal Order (Top to Bottom)
-- Incoming Message to Route (Top priority)
-
-- Business Sender Context
-
-- Recipient User Context
-
-- Group Metadata Context
-
-- Recent Historical Evidence (Optional)
-
-- Media Attachment Context (Optional)
-"""
-
 ROUTING_PROMPT_TEMPLATE = """
 {incoming_message_context}
 
@@ -113,8 +97,6 @@ ROUTING_PROMPT_TEMPLATE = """
 
 {media_context}
 
---- 
-
 ## TASK INSTRUCTION
 Analyze the incoming message, user preferences, sender verification, and history. 
 Pay special attention to whether an incoming message represents an active, time-sensitive transaction that overrides a muted group state.
@@ -122,18 +104,20 @@ Decide whether this message should be:
 1. `notify` (interrupt now)
 2. `digest` (save for later)
 3. `mute` (suppress as low-value, repetitive, or unsafe)
----
-
+ 
 CRITICAL OUTPUT REQUIREMENT:
 Return your response as a valid JSON object wrapped inside a markdown code block (```json ... ```) matching this exact schema:
+
 {{
-    "message_id": "{message_id}",
+    "message_id": "sample_msg_041",
     "action": "notify", 
     "message_type": "transaction",
     "reason": "Explain your decision here...",
     "confidence": 0.85,
-    "evidence_message_ids": ["message_0232", "message_0335"]
+    "evidence_message_ids": ["message_0046"] 
 }}
 
-** IMPORTANT: JSON object keys must be in this order.  Do not deviate! **
+** IMPORTANT: 
+1. JSON object keys must be in this order. Do not deviate! **
+2. Replace the placeholder values above with the actual data and IDs from the current context.
 """.strip()
