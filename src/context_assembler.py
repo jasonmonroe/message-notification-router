@@ -1,5 +1,9 @@
 # src/context_assembler.py
 
+# +-----------------------------------+
+# |        CONTEXT ASSEMBLER          |
+# +-----------------------------------+
+
 # Python Libraries
 import cv2
 import os
@@ -26,7 +30,6 @@ class ContextAssembler:
         self._groups = data.groups
         self._images = data.images
         self._message_history = data.message_history
-        #self._message = pd.DataFrame() 
         self._user_business_history = data.user_business_history
         self._users = data.users
         self._voice_notes = data.voice_notes
@@ -51,7 +54,7 @@ class ContextAssembler:
         filepath = self._get_media_filepath(message_row.media_type, message_row.media_id)
         if filepath:
             filtered_dataset["media_filepath"] = filepath
-            filtered_dataset["media_description"] = self._get_media_description(message_row.media_type, filepath)
+            filtered_dataset["media_context"] = self._get_media_context(message_row.media_type, filepath)
 
         # Load Prompt Builder to get the prompt
         builder = PromptBuilder(filtered_dataset)
@@ -72,9 +75,6 @@ class ContextAssembler:
             "users": self._users[self._users["user_id"] == user_id]
         }
 
-    
-
-
     def _filter_by_group(self, group_members: pd.DataFrame, group_id: str) -> dict:
         return {
             "group_members": group_members[group_members["group_id"] == group_id],
@@ -83,7 +83,8 @@ class ContextAssembler:
 
     def _get_media_filepath(self, media_type: str, media_id: str) -> str | None:
         """
-        Get full media filepath from the root directory "dataset" based on message row columns: media_type and media_id
+        Get full media filepath from the root directory "dataset" based on message
+        row columns: media_type and media_id
         """
 
         # Check columns for missing information return None if missing.
@@ -104,18 +105,20 @@ class ContextAssembler:
             filtered_media = media_df[media_df[id_column] == media_id]
             
             if not filtered_media.empty:
-                # @TODO - old: raw_path = filtered_media.iloc[0].get("file_path") or filtered_media.iloc[0].get("filename")
                 media_filepath = filtered_media.iloc[0].get("file_path")
                 
+                # Ensure path points to the correct location (e.g., inside dataset directory)
+                # Adjust 'dataset/' prefix if your folder structure differs
                 if media_filepath:
-                    # Ensure path points to the correct location (e.g., inside dataset directory)
-                    # Adjust 'dataset/' prefix if your folder structure differs
                     return media_filepath if os.path.exists(media_filepath) else os.path.join("dataset", media_filepath)
 
         return None
 
-    def _get_media_description(self, media_type: str, media_filepath: str) -> str:
+    def _get_media_context(self, media_type: str, media_filepath: str) -> str:
         """
+        ## MEDIA ATTACHMENT CONTEXT (Type: {media_type}, File: {media_filename})
+        {media_content_description}
+
         For Voice Notes / Audio: 
             Pass the transcription of the audio file (if you have an automatic speech-to-text 
             step or dataset column) so the model can read what was said.
@@ -123,9 +126,25 @@ class ContextAssembler:
     	For Images: 
             Pass a caption, OCR text extracted from the image, or a short description of the 
             image content.
+
+        If none, remove it entirely otherwise get the description and build the context around it.
         """
 
-        description = "No media content available."
+        def _include_media_context(media_type: str, media_filename: str, media_content_description: str) -> str:
+            return """
+            <media_attachment>
+                <metadata type="{media_type}" filename="{media_filename}" />
+                <description>
+                    {media_content_description}
+                </description>
+            </media_attachment>
+            """.strip().format(
+                media_type=media_type,
+                media_filename=media_filename,
+                media_content_description=media_content_description,
+            )
+
+        description = None
 
         if media_type == "image":   
             description = self._extract_image_text(media_filepath)
@@ -133,7 +152,10 @@ class ContextAssembler:
         elif media_type == "voice":
             description = self._transcribe_audio_file(media_filepath)
 
-        return description.strip()
+        if description:
+            return _include_media_context(media_type, os.path.basename(media_filepath), description)
+
+        return ""
         
     def _transcribe_audio_file(self, audio_filepath: str) -> str:
         """

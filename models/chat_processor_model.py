@@ -1,11 +1,16 @@
 # code/models/chat_processor_model.py
 
+# +-----------------------------------+
+# |        CHAT PROCESSOR MODEL       |
+# +-----------------------------------+
+
 # Python Libraries
 import json
 import re
+import time
 
 # Vendor Libraries
-from openai import OpenAI
+from openai import OpenAI, InternalServerError, RateLimitError
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 
 # Local Libraries
@@ -13,7 +18,9 @@ from src.constants import (
     MAX_TOKENS,
     MODEL_API_KEY, 
     MODEL_API_URL, 
-    MODEL_NAME, 
+    MODEL_NAME,
+    RATE_LIMIT_PAUSE_TIMER,
+    RATE_LIMIT_RETRIES, 
     SYSTEM_INSTRUCTIONS
     )
 
@@ -40,10 +47,10 @@ class ChatProcessorModel:
             base_url=MODEL_API_URL,
             api_key=MODEL_API_KEY,
             timeout=120,   # ⏱️ Kill the connection if it hangs over 120 seconds
-            max_retries=3, # 🔄 Automatically back off and retry 3 times natively
+            max_retries=RATE_LIMIT_RETRIES, # 🔄 Automatically back off and retry 3 times natively
         )
 
-    def get_response(self, prompt: str) -> dict:
+    def get_response(self, prompt: str, row_index: int) -> dict:
         """
         Calls OpenAI model with instructions and prompt context and waits for a response.  The response is then
         filtered and returned in a specific format for output.
@@ -51,21 +58,76 @@ class ChatProcessorModel:
         https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create
         """
        
-        response = self._client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.0,
-            max_completion_tokens=MAX_TOKENS,
-            response_format={"type": "json_object"},
-            top_p=1.0,
-            timeout=90.0
-        )
+        rate_limit_ctr = 0
 
-        return self._format_response(self._filter_response(response))
+        try:
+            response = self._client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_INSTRUCTIONS},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.0,
+                max_completion_tokens=MAX_TOKENS,
+                response_format={"type": "json_object"},
+                top_p=1.0,
+                timeout=90.0
+            )
 
+            return self._format_response(self._filter_response(response))
+        
+        except InternalServerError as e:
+            print(f"🚨 Idx: {row_index} {self.name} Server error encountered (503/5xx): {e} 🚨")
+            return {}  # Return safe empty list so downstream code doesn't crash on None
+        
+        except RateLimitError as e:
+            print(f"\n🚨 Idx: {row_index} Rate limit / Quota exceeded (429) on attempt: {rate_limit_ctr}. 🚨")
+
+            body = e.body[0] if isinstance(e.body, list) else e.body
+            error_message = body.get("error", {}).get("message", [])
+
+            print(f"🚨 {error_message} 🚨")
+
+            if rate_limit_ctr >= RATE_LIMIT_RETRIES:
+                print(f"\n🚨 Idx: {row_index} {self.name} request has exceeded the maximum amount of retries! Returning None. 🚨")
+                return {}
+
+            # You can parse the retry delay or default to a safe pause
+            rate_limit_ctr += 1
+
+            delay_time = self._parse_delay_time(error_message)
+            print(f"_get_delay_time returns{delay_time}")
+ 
+            time.sleep(delay_time)
+
+        except Exception as e:
+            print(f"\n🚨 Idx: {row_index} {self.name} Unexpected API error occurred: {e} 🚨")
+            return {}
+
+    def _parse_delay_time(self, error_message: str) -> int | float:
+        # Let's attempt to use the vendor's response delay time suggestion instead of our own.
+        err = error_message.lower()
+        anchor_str = "please retry in "
+        end_char = "s." # Safely skips the decimal point
+
+        if anchor_str not in err or end_char not in err:
+            return RATE_LIMIT_PAUSE_TIMER
+        
+        # Anchor string has been found!  
+        # Cherry pick their delay time by getting the start and end string positions. Then remove the `s` for seconds and convert to a float.
+        start_pos = err.find(anchor_str) + len(anchor_str)
+        end_pos = err.find(end_char, start_pos)
+
+        delay_time_str = err[start_pos:end_pos]
+        print(f"delay_time_str={delay_time_str}")
+        delay_time = float(delay_time_str.replace("s", ""))
+
+        # Just in case the vendor's delay time is long we will override it.
+        if delay_time > (RATE_LIMIT_PAUSE_TIMER * 2):
+            return RATE_LIMIT_PAUSE_TIMER
+
+        return delay_time
+        
     def _filter_response(self, response: ChatCompletion) -> dict:
         try:
             if hasattr(response, "choices"):

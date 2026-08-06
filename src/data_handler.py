@@ -1,5 +1,9 @@
 # src/data_handler.py
 
+# +-----------------------------------+
+# |           DATA HANDLER            |
+# +-----------------------------------+
+
 # Python Libraries
 import csv
 import cv2
@@ -81,14 +85,6 @@ class DataHandler:
             writer.writeheader()
             for msg_id, row_data in existing_data.items():
                 writer.writerow(row_data)
-
-    # @todo - backup
-    def save_output2(self, csv_rows: list) -> None: 
-        # Write all at once
-        with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(CSV_HEADER_COLS) 
-            writer.writerows(csv_rows.copy())           
 
     def describe_audio(self) -> None:
         if self.voice_notes.empty:

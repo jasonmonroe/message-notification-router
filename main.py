@@ -4,6 +4,7 @@
 +----------------------------------+
 | HACKERRANK ORCHESTRATE CHALLENGE |
 +----------------------------------+
+
 https://www.hackerrank.com/contests/hackerrank-orchestrate-august26/challenges/message-notification-router
 # Clone Repo - https://github.com/interviewstreet/hackerrank-orchestrate-august26
 """
@@ -16,8 +17,7 @@ __version__ = "1.0.0"
 
 # Python Libraries
 from dotenv import load_dotenv
-load_dotenv(".env") #../.env"
-
+load_dotenv(".env")
 import sys
 import warnings
 

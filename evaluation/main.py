@@ -23,7 +23,6 @@ def run_data_pipeline(args: list):
 
     return data_handler
 
-
 def run_message_reviewer_pipeline(data_handler) -> list | None:
     print("\nRunning Message Reviewer Pipeline")
 
@@ -32,28 +31,29 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     chat_model = ChatProcessorModel(messages_cnt)
     assembler = ContextAssembler(data_handler)
-    import sys
 
     output_rows = []
     for row in messages_df.itertuples():
-        # @TODO - only test one particular row
-        print(f"\nrow.Index={row.Index}")
-        if row.Index == 21:
-            
-            start_time = start_timer()
-            prompt = assembler.build_prompt_by_user(row)
-            print(f"\nDBG:prompt = {prompt}")
-            response = chat_model.get_response(prompt) # response is a list
-            print(f"\nDBG: response = {response}")
-            show_timer(start_time)
-        
-            time.sleep(PAUSE_TIMER)
-            output_rows.append(response)
+        print(f"\n----- {row.Index} -----")
+        start_time = start_timer()
+        prompt = assembler.build_prompt_by_user(row)
+        print(f"\nDBG:prompt len= ({len(prompt)})")
+        print(f"{prompt}")
+        response = chat_model.get_response(prompt, row.Index) # response is a list
 
-            print(get_progress_bar(row.Index, messages_cnt))
+        if response is None:
+            print(f"No response was given due to an error.  Breaking loop at index {row.Index}.")
+            break
+        print(f"\nDBG: response = {response}")
+        show_timer(start_time)
+        print(f"Pause {PAUSE_TIMER} seconds.")
+        time.sleep(PAUSE_TIMER)
+        output_rows.append(response)
+
+        print(get_progress_bar(row.Index, messages_cnt))
 
     # List of output rows that need to be formatted
     print(f"\nDBG: output_rows={output_rows}")
-    #sys.exit(0)
+
     return output_rows
     
