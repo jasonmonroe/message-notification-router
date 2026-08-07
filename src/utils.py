@@ -179,7 +179,7 @@ def get_progress_bar(idx: int, total: int) -> str:
     """
     print("")
 
-    i_empty, i_full = "☑️ ", "✅️"
+    i_empty, i_full = "☑️ ", "✅️ "
     completion_pct = ((idx + 1) / total) * 100
 
     graphic = ""

@@ -32,34 +32,29 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
 
     output_rows = []
     for row in messages_df.itertuples():
-        if row.Index == 24:
-            print(f"\nDBG: ---- {row.Index} ({row.message_id}) ----")
+        if row.Index >= 0:
             log_chat_transcript("PROMPT_ASSEMBLY", f"Assembling prompt for index: {row.Index}, message ID: {row.message_id}")
 
             start_time = start_timer()
             prompt = assembler.build_prompt_by_user(row)
             log_chat_transcript("PROMPT_BUILT", prompt) # Logs the exact XML/Text sent to the LLM
-            print(f"{prompt}")
             #continue
-            
             response = chat_model.get_response(prompt, row.Index) # response is a list
             if isinstance(response, dict) and hasattr(response, "error"):
-                log_chat_transcript("Error in response", response)
+                log_chat_transcript("LLM RESPONSE", response)
                 print(f"No response was given due to an error.  Breaking loop at index {row.Index}.")
                 break
 
-            print(f"\nDBG: response = {response}")
-            log_chat_transcript("LLM_RESPONSE", response)
+            log_chat_transcript("LLM RESPONSE", response)
             log_chat_transcript("LLM Response Time", get_time(start_time))
             show_timer(start_time)
-            print(f"Pause {PAUSE_TIMER} seconds.")
+           
             time.sleep(PAUSE_TIMER)
             output_rows.append(response)
 
-            log_chat_transcript("Progress", get_progress_bar(row.Index, messages_cnt))
+            log_chat_transcript("Progress Bar", get_progress_bar(row.Index, messages_cnt))
             print(get_progress_bar(row.Index, messages_cnt))
 
     # List of output rows that need to be formatted
-    log_chat_transcript("OUTPUT DATA", output_rows)
     return output_rows
     
