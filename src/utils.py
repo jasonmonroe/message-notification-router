@@ -155,7 +155,7 @@ def log_chat_transcript(stage: str, content: str) -> None:
     """
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    divider = "=" * PEP8_LINE_LEN
+    divider = "-" * PEP8_LINE_LEN
 
     log_entry = (
         f"\n{divider}\n"

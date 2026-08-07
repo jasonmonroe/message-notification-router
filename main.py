@@ -24,13 +24,14 @@ import warnings
 # Local Libraries
 from evaluation.main import run_data_pipeline, run_message_reviewer_pipeline
 from src.constants import APP_NAME, ARGS_LIST
-from src.utils import gen_run_id, show_banner, show_timer, start_timer
-
+from src.utils import get_time, log_chat_transcript, gen_run_id, show_banner, show_timer, start_timer
+ 
  
 def run_main_pipeline(args: list):
     show_banner(f"{APP_NAME}")
     
     data_handler = run_data_pipeline(args)
+    log_chat_transcript("DATA_LOAD", f"Successfully loaded messages. Total rows: {len(data_handler.messages)}")
     output_rows = run_message_reviewer_pipeline(data_handler)
     data_handler.save_output(output_rows)
 
@@ -41,15 +42,22 @@ def parse_args(command_line_args: list[str]) -> dict:
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
+
+    log_chat_transcript("APP NAME", f"{APP_NAME}")
+    
     prog_start_time = start_timer()
     
     run_id = gen_run_id()
     print(f"\n----- 🖨️️ START RUN ID: {run_id} 🖨️️ -----")
+    log_chat_transcript(f"\n----- START RUN ID: 🖨️️ -----", run_id)
   
     args = parse_args(sys.argv[1:])
 
     # Start Chat Transcript Logging
+    log_chat_transcript("PIPELINE_INIT", f"Initialized pipeline with arguments: {args}")
     run_main_pipeline(args)
 
     show_timer(prog_start_time)
+    log_chat_transcript("Program Run Time", get_time(prog_start_time))
+    log_chat_transcript(f"\n----- END RUN ID: 🖨️️ -----", run_id)
     print(f"\n----- 🖨️️ END RUN ID: {run_id} 🖨️️ -----\n")
