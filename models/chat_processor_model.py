@@ -1,8 +1,8 @@
 # code/models/chat_processor_model.py
 
-# +-----------------------------------+
-# |        CHAT PROCESSOR MODEL       |
-# +-----------------------------------+
+# +-----------------------------------------------------------------------------+
+# |                             CHAT PROCESSOR MODEL                            |
+# +-----------------------------------------------------------------------------+
 
 # Python Libraries
 import json
@@ -24,7 +24,7 @@ from src.constants import (
     SYSTEM_INSTRUCTIONS
     )
 
-from src.utils import show_banner
+from src.utils import log_chat_transcript, show_banner
 
 class ChatProcessorModel:
     def __init__(self, row_cnt: int):
@@ -38,11 +38,11 @@ class ChatProcessorModel:
         ]
 
         self.name = "WhatsApp Chat Processing Model"
-        show_banner(self.name.upper(), subtitles)
+        show_banner(self.name, subtitles)
         
-        self._client = self._load_model(row_cnt)
+        self._client = self._load_model()
 
-    def _load_model(self, row_cnt:int) -> OpenAI:
+    def _load_model(self) -> OpenAI:
         return OpenAI(
             base_url=MODEL_API_URL,
             api_key=MODEL_API_KEY,
@@ -58,49 +58,52 @@ class ChatProcessorModel:
         https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create
         """
        
-        rate_limit_ctr = 0
+        attempt = 0
+        while attempt < RATE_LIMIT_RETRIES:
+            print(f"while() attempt={attempt}")
+            try:
 
-        try:
-            response = self._client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[
-                    {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.0,
-                max_completion_tokens=MAX_TOKENS,
-                response_format={"type": "json_object"},
-                top_p=1.0,
-                timeout=90.0
-            )
+                response = self._client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_INSTRUCTIONS},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.0,
+                    max_completion_tokens=MAX_TOKENS,
+                    response_format={"type": "json_object"},
+                    top_p=1.0,
+                    timeout=90.0
+                )
 
-            return self._format_response(self._filter_response(response))
-        
-        except InternalServerError as e:
-            print(f"🚨 Idx: {row_index} | {self.name} Server error encountered (503/5xx): {e} 🚨")
-            return {}  # Return safe empty list so downstream code doesn't crash on None
-        
-        except RateLimitError as e:
-            print(f"\n🚨 Idx: {row_index} | Rate limit / Quota exceeded (429) on attempt: {rate_limit_ctr}. 🚨")
-
-            body = e.body[0] if isinstance(e.body, list) else e.body
-            error_message = body.get("error", {}).get("message", [])
-
-            print(f"🚨 {error_message} 🚨")
-
-            if rate_limit_ctr >= RATE_LIMIT_RETRIES:
-                print(f"\n🚨 Idx: {row_index} | {self.name} request has exceeded the maximum amount of retries! Returning None. 🚨")
-                return {"error": True}
-
-            # You can parse the retry delay or default to a safe pause
-            rate_limit_ctr += 1
-            delay_time = self._parse_delay_time(error_message)
+                return self._format_response(self._filter_response(response))
             
-            time.sleep(delay_time)
+            except InternalServerError as e:
+                print(f"🚨 Idx: {row_index} | {self.name} Server error encountered (503/5xx): {e} 🚨")
+                return {}  # Return safe empty list so downstream code doesn't crash on None
+            
+            except RateLimitError as e:
+                print(f"\n🚨 Idx: {row_index} | Rate limit / Quota exceeded (429) on attempt: {attempt} 🚨")
 
-        except Exception as e:
-            print(f"\n🚨 Idx: {row_index} | {self.name} Unexpected API error occurred: {e} 🚨")
-            return {}
+                if attempt >= RATE_LIMIT_RETRIES:
+                    print(f"\n🚨 Idx: {row_index} | {self.name} request has exceeded the maximum amount of retries! Returning {{error: True}}. 🚨")
+                    return {"error": True}
+
+                attempt += 1
+
+                body = e.body[0] if isinstance(e.body, list) else e.body
+                error_message = body.get("error", {}).get("message", [])
+                print(f"\n🚨 {error_message} 🚨")
+
+                # You can parse the retry delay or default to a safe pause
+                delay_time = self._parse_delay_time(error_message)
+                log_chat_transcript("RATE LIMIT ERROR", error_message)
+
+                time.sleep(delay_time)
+
+            except Exception as e:
+                print(f"\n🚨 Idx: {row_index} | {self.name} Unexpected API error occurred: {e} 🚨")
+                return {}
 
     def _parse_delay_time(self, error_message: str) -> int | float:
         # Let's attempt to use the vendor's response delay time suggestion instead of our own.

@@ -1,8 +1,8 @@
 # src/data_handler.py
 
-# +-----------------------------------+
-# |           DATA HANDLER            |
-# +-----------------------------------+
+# +-----------------------------------------------------------------------------+
+# |                              DATA HANDLER                                   |
+# +-----------------------------------------------------------------------------+
 
 # Python Libraries
 import csv
@@ -60,6 +60,9 @@ class DataHandler:
         Updates the existing CSV file by matching message_id using a list of lists.
         Preserves unprocessed placeholder rows and updates existing ones.
         """
+
+        if CSV_HEADER_COLS is None:
+            raise ValueError("CSV_HEADER_COLS is None. Check your imports or ensure it is defined before save_output() runs.")
 
         existing_data = {}
         

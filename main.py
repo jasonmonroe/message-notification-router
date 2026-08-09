@@ -1,9 +1,9 @@
 # main.py
 
 """
-+----------------------------------+
-| HACKERRANK ORCHESTRATE CHALLENGE |
-+----------------------------------+
++-----------------------------------------------------------------------------+
+|                     HACKERRANK ORCHESTRATE CHALLENGE                        |
++-----------------------------------------------------------------------------+
 
 https://www.hackerrank.com/contests/hackerrank-orchestrate-august26/challenges/message-notification-router
 # Clone Repo - https://github.com/interviewstreet/hackerrank-orchestrate-august26
@@ -28,7 +28,7 @@ from src.utils import get_time, log_chat_transcript, gen_run_id, show_banner, sh
  
  
 def run_main_pipeline(args: list):
-    show_banner(f"{APP_NAME}")
+    show_banner(f"{APP_NAME.upper()}")
     
     data_handler = run_data_pipeline(args)
     

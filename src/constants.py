@@ -2,9 +2,9 @@
 
 import os
 
-# +-----------------------------------+
-# |           CONSTANTS               |
-# +-----------------------------------+
+# +-----------------------------------------------------------------------------+
+# |                                 CONSTANTS                                   |
+# +-----------------------------------------------------------------------------+
 
 ARGS_LIST = [
     "--eda",
@@ -50,7 +50,8 @@ CSV_HEADER_COLS = [
 # Dataset files
 CHAT_TRANSCRIPT_FILE = "log.txt"
 DATASET_DIR = "dataset/"
-OUTPUT_FILEPATH = os.path.join(DATASET_DIR, "output.csv")
+OUTPUT_FILE = "output.csv"
+OUTPUT_FILEPATH = os.path.join(DATASET_DIR, OUTPUT_FILE)
 
 AUDIO_DIR = os.path.join(DATASET_DIR, "media", "audio")
 IMAGES_DIR = os.path.join(DATASET_DIR, "media", "images")

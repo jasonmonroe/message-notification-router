@@ -1,8 +1,8 @@
 # src/context_assembler.py
 
-# +-----------------------------------+
-# |        CONTEXT ASSEMBLER          |
-# +-----------------------------------+
+# +-----------------------------------------------------------------------------+
+# |                              CONTEXT ASSEMBLER                              |
+# +-----------------------------------------------------------------------------+
 
 # Python Libraries
 import cv2
@@ -89,6 +89,17 @@ class ContextAssembler:
             "groups": self._groups[self._groups["group_id"] == group_id],
         }
 
+    def _clean_message(self, message_row: pd.DataFrame) -> pd.DataFrame:
+        message_dict = message_row._asdict()
+
+        # Clean out the nan values, replacing them with empty strings
+        cleaned_dict = {
+            key: ("" if pd.isna(value) else value) 
+            for key, value in message_dict.items()
+        }
+
+        return cleaned_dict
+
     def _get_media_filepath(self, media_type: str, media_id: str) -> str | None:
         """
         Get full media filepath from the root directory "dataset" based on message row columns: media_type and media_id
@@ -99,11 +110,9 @@ class ContextAssembler:
             return None
 
         if media_type == "image":
-            id_column = "image_id" 
-            media_df = self._images
+            id_column, media_df = "image_id", self._images 
         elif media_type == "voice":
-            id_column = "voice_note_id"   
-            media_df = self._voice_notes
+            id_column, media_df = "voice_note_id", self._voice_notes
         else:
             return None
 
@@ -120,17 +129,6 @@ class ContextAssembler:
                     return media_filepath if os.path.exists(media_filepath) else os.path.join("dataset", media_filepath)
 
         return None
-
-    def _clean_message(self, message_row: pd.DataFrame) -> pd.DataFrame:
-        message_dict = message_row._asdict()
-
-        # Clean out the nan values, replacing them with empty strings
-        cleaned_dict = {
-            key: ("" if pd.isna(value) else value) 
-            for key, value in message_dict.items()
-        }
-
-        return cleaned_dict
 
     def _get_media_description(self, media_type: str, media_filepath: str) -> str | None:
         """
