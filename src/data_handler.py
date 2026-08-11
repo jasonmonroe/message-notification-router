@@ -24,7 +24,7 @@ from src.constants import (
     MSEC,
     OUTPUT_FILEPATH,
 )
-from src.utils import show_banner
+from src.utils import log_chat_transcript, show_banner
 
 class DataHandler:
     def __init__(self, args: dict) -> None:
@@ -36,13 +36,13 @@ class DataHandler:
         self.group_members = None
         self.groups = None
         self.images = None
-        self.message_events = None
+        self.message_events = None 
         self.message_history = None
+        self.messages = None
         self.output = None
         self.user_business_history = None
         self.users = None
         self.voice_notes = None
-        self.audios = None
 
         self._load()
 
@@ -53,7 +53,12 @@ class DataHandler:
 
         # Override messages with sample if necessary
         if self._use_sample:
+            log_chat_transcript("DATA_HANDLER", "Loading sample messages.")
             self.messages = pd.read_csv(os.path.join(DATASET_DIR, "sample_messages.csv"))
+
+            # Randomize row data
+            #print("Sample data is now being shuffled...")
+            #self.messages = self.messages.sample(frac=1).reset_index(drop=True)
 
     def save_output(self, csv_rows: list) -> None: 
         """
@@ -62,7 +67,7 @@ class DataHandler:
         """
 
         if CSV_HEADER_COLS is None:
-            raise ValueError("CSV_HEADER_COLS is None. Check your imports or ensure it is defined before save_output() runs.")
+            raise ValueError("\n🚨 CSV_HEADER_COLS is None. Check your imports or ensure it is defined before save_output() runs.")
 
         existing_data = {}
         
@@ -72,6 +77,7 @@ class DataHandler:
                 reader = csv.DictReader(csv_file)
                 for row in reader:
                     msg_id = row.get("message_id")
+
                     if msg_id:  # Ignore empty or malformed rows
                         existing_data[msg_id] = row
 
@@ -79,6 +85,7 @@ class DataHandler:
         for row_list in csv_rows:
             row_dict = dict(zip(CSV_HEADER_COLS, row_list))
             msg_id = row_dict.get("message_id")
+
             if msg_id:
                 existing_data[msg_id] = row_dict
 
@@ -86,8 +93,48 @@ class DataHandler:
         with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=CSV_HEADER_COLS)
             writer.writeheader()
+
             for msg_id, row_data in existing_data.items():
                 writer.writerow(row_data)
+
+    def describe(self) -> None:
+        sample_text = "Sample" if self._use_sample else ""
+
+        if self.messages.empty:
+            raise ValueError(f"\n🚨 No {sample_text} messages loaded...")
+        
+        print("\n# --- 🗒️ Describe Text Data 🗒️ --- #")
+        print(f"💬 {sample_text} Message Information")
+        print(f"ℹ️ Row Count: {self.messages.shape[0]} | Column Count: {self.messages.shape[1]}")
+
+        print("ℹ️ Head")
+        print(self.messages.head())
+
+        print("ℹ️ Tail")
+        print(self.messages.tail())
+
+        print("ℹ️ Shape")
+        print(self.messages.shape)
+
+        # Checking the data types of the columns for the dataset
+        print("\nChecking the data types of the columns for the dataset:")
+        print(self.messages.info())
+
+        # Check for a Statistical Summary
+        print("\nCheck for a Statistical Summary:")
+        print(self.messages.describe().T)
+
+        # Checking for missing values
+        print("\nChecking for missing values:")
+        print(self.messages.isnull().sum())
+
+        # Checking for duplicate values
+        num_dup_values = self.messages.duplicated().sum()
+        print(f"Number of duplicate values: {num_dup_values}")
+
+        # --- Describe Media --- #
+        self.describe_audio()
+        self.describe_images()
 
     def describe_audio(self) -> None:
         if self.voice_notes.empty:
@@ -153,6 +200,7 @@ class DataHandler:
             subtitles.append(f"ℹ️ Is Lossless?: {voice_note_tag.is_lossless}")
         
             show_banner(f"🔈 Audio File {row.Index}", subtitles)
+            log_chat_transcript(f"🔈 Audio File {row.Index}", subtitles)
 
     def describe_images(self) -> None:
         if self.images.empty:
@@ -186,50 +234,15 @@ class DataHandler:
             subtitles.append(f"ℹ️ Height: {height}, Width: {width}")
             subtitles.append(f"ℹ️ Channels: {channels}")
             subtitles.append(f"ℹ️ Total Pixels:{image_data.size}") # Total number of elements
-            subtitles.append(f"ℹ️ Data Type:{image_data.dtype}") # Usually uint8 (8-bit pixels)
+            subtitles.append(f"ℹ️ Data Type:{image_data.dtype}")   # Usually uint8 (8-bit pixels)
 
             show_banner(f"🏞️ Image {row.Index}", subtitles)
 
             cv2.imshow(f"{row.Index} - {image_id}", image_data)
+            log_chat_transcript(f"{row.Index} - {image_id}", subtitles)
 
             # Delay x miliseconds before closing image
             cv2.waitKey(MSEC)
             cv2.destroyAllWindows()
         
-    def describe(self) -> None:
-        sample_text = "Sample" if self._use_sample else ""
-
-        if self.messages.empty:
-            raise ValueError(f"\n🚨 No {sample_text} messages loaded...")
-        
-        print("\n# --- 🗒️ Describe Text Data 🗒️ --- #")
-        print(f"💬 {sample_text} Message Information")
-        print(f"ℹ️ Row Count: {self.messages.shape[0]} | Column Count: {self.messages.shape[1]}")
-
-        print("ℹ️ Head")
-        print(self.messages.head())
-
-        print("ℹ️ Tail")
-        print(self.messages.tail())
-
-        print("ℹ️ Shape")
-        print(self.messages.shape)
-
-        # Checking the data types of the columns for the dataset
-        print("\nChecking the data types of the columns for the dataset:")
-        print(self.messages.info())
-
-        # Check for a Statistical Summary
-        print("\nCheck for a Statistical Summary:")
-        print(self.messages.describe().T)
-
-        # Checking for missing values
-        print("\nChecking for missing values:")
-        print(self.messages.isnull().sum())
-
-        # Checking for duplicate values
-        num_dup_values = self.messages.duplicated().sum()
-        print(f"Number of duplicate values: {num_dup_values}")
-
-        self.describe_audio()
-        self.describe_images()
+    

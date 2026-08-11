@@ -22,7 +22,7 @@ from src.constants import (
     RATE_LIMIT_PAUSE_TIMER,
     RATE_LIMIT_RETRIES, 
     SYSTEM_INSTRUCTIONS
-    )
+)
 
 from src.utils import log_chat_transcript, show_banner
 
@@ -60,7 +60,6 @@ class ChatProcessorModel:
        
         attempt = 0
         while attempt < RATE_LIMIT_RETRIES:
-            print(f"while() attempt={attempt}")
             try:
 
                 response = self._client.chat.completions.create(
@@ -89,8 +88,6 @@ class ChatProcessorModel:
                     print(f"\n🚨 Idx: {row_index} | {self.name} request has exceeded the maximum amount of retries! Returning {{error: True}}. 🚨")
                     return {"error": True}
 
-                attempt += 1
-
                 body = e.body[0] if isinstance(e.body, list) else e.body
                 error_message = body.get("error", {}).get("message", [])
                 print(f"\n🚨 {error_message} 🚨")
@@ -100,6 +97,7 @@ class ChatProcessorModel:
                 log_chat_transcript("RATE LIMIT ERROR", error_message)
 
                 time.sleep(delay_time)
+                attempt += 1
 
             except Exception as e:
                 print(f"\n🚨 Idx: {row_index} | {self.name} Unexpected API error occurred: {e} 🚨")

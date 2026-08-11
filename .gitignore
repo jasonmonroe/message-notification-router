@@ -2,11 +2,12 @@
 
 __pycache__
 
-.env
-.idea
-.vscode
-.venv
 .DS_Store
-
-venv
+.env
+.htaccess
+.idea
+.venv
+.vim
+.vscode
 dataset/output.csv
+venv

@@ -53,8 +53,6 @@ DATASET_DIR = "dataset/"
 OUTPUT_FILE = "output.csv"
 OUTPUT_FILEPATH = os.path.join(DATASET_DIR, OUTPUT_FILE)
 
-AUDIO_DIR = os.path.join(DATASET_DIR, "media", "audio")
-IMAGES_DIR = os.path.join(DATASET_DIR, "media", "images")
 AUDIO_SAMPLE_RATE = None
 
 # Model Information
@@ -67,8 +65,8 @@ MODEL_NAME = os.getenv("MODEL_NAME")
 SYSTEM_INSTRUCTIONS = """
 You are a machine learning expert with extensive knowledge in multimodal prompts for an AI-powered system such as WhatsApp that decides which messages deserve immediate attention, which should wait, and which should be muted.
 
-## CRITICAL EXECUTION RULES:
-1. Analyze xml data that consists of messages, user context, business context, group metadata, history and media attachments (if available) together to make a routing determination.
+## CRITICAL EXECUTION RULES: 
+1. The data is provided in XML. It consists of messages, user context, business context, group metadata, history, daily notifications and media attachments (if available) together to make a routing determination.
 2. You must output your final routing determination strictly as a valid JSON object matching the requested schema, using exact action values: 'notify', 'digest', or 'mute'.
 ---
 
@@ -85,10 +83,12 @@ Evaluate your certainty for the chosen action on a scale from 0.0 to 1.0:
 - General chat, promotional broadcasts, or automated alerts from a muted group must remain 'muted' or sent to 'digest'.
 """.strip()
 
+
+
 ROUTING_PROMPT_TEMPLATE = """
 ## USER - BUSINESS MESSAGE DATA
 
-<context>
+<routing_input>
     {incoming_message_context}
 
     {business_sender_context}
@@ -97,13 +97,17 @@ ROUTING_PROMPT_TEMPLATE = """
 
     {group_metadata_context}
 
+    <!-- Below is the historical background and notification activity for the target user -->
+    {user_behavioral_profile_context}
+
+    <!-- Optional Data -->
     {historical_evidence}
 
     {media_context}
-</context>
+</routing_input>
 
 
-## TASK INSTRUCTION
+## TASK INSTRUCTIONS
 Analyze the incoming message, user preferences, sender verification, and history. 
 Pay special attention to whether an incoming message represents an active, time-sensitive transaction that overrides a muted group state.
 Decide whether this message should be:
@@ -112,6 +116,41 @@ Decide whether this message should be:
 3. `mute` (suppress as low-value, repetitive, or unsafe)
  
 CRITICAL OUTPUT REQUIREMENT:
+Return your response as a valid JSON object wrapped inside a markdown code block (```json ... ```). 
+
+**The JSON structure below is a template/blueprint.** Do not use the sample IDs or values from it. Populate all keys using the *actual data, IDs, and decisions* derived from the prompt context above:
+
+{{
+    "message_id": "sample_msg_041",
+    "action": "notify", 
+    "message_type": "transaction",
+    "reason": "Explain your decision here...",
+    "confidence": 0.85,
+    "evidence_message_ids": ["message_0046"] 
+}}
+
+**IMPORTANT RULES:**
+1. JSON object keys must be in the exact order shown above. Do not deviate!
+2. Replace all placeholder values with real data from the current context.
+""".strip()
+
+
+
+
+ROUTING_PROMPT_TEMPLATE = """
+## XML ROUTING DATA
+
+{routing_input_xml}
+
+## TASK INSTRUCTIONS
+Analyze the incoming message, user preferences, sender verification, and history. 
+Pay special attention to whether an incoming message represents an active, time-sensitive transaction that overrides a muted group state.
+Decide whether this message should be:
+1. `notify` (interrupt now)
+2. `digest` (save for later)
+3. `mute` (suppress as low-value, repetitive, or unsafe)
+ 
+### CRITICAL OUTPUT REQUIREMENT:
 Return your response as a valid JSON object wrapped inside a markdown code block (```json ... ```). 
 
 **The JSON structure below is a template/blueprint.** Do not use the sample IDs or values from it. Populate all keys using the *actual data, IDs, and decisions* derived from the prompt context above:
