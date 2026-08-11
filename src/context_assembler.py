@@ -3,7 +3,7 @@
 # +-----------------------------------------------------------------------------+
 # |                              CONTEXT ASSEMBLER                              |
 # +-----------------------------------------------------------------------------+
-import sys
+
 # Python Libraries
 import cv2
 import os
@@ -28,25 +28,6 @@ class ContextAssembler:
     def __init__(self, dataset: dict) -> None:
         self._data = dataset 
 
-
-       # import sys
-        #print(f"self._data={self._data}")
-        #sys.exit(0)
-
-        """
-        self._business_accounts = data.business_accounts
-        self._daily_notification
-        self._group_members = data.group_members
-        self._groups = data.groups
-        self._images = data.images
-        #
-        self._message_history = data.message_history
-        self._user_business_history = data.user_business_history
-        self._users = data.users
-        self._voice_notes = data.voice_notes
-        """
-        
-
     def build_prompt_by_user(self, message_row: pd.DataFrame) -> str:
         """
         Ingestion and Context
@@ -54,7 +35,6 @@ class ContextAssembler:
         preferences (users.csv), group role (group_members.csv), business status (business_accounts.csv), 
         and past chat history (message_history.csv) into a single structured context payload.
         """
-        print(f"message_id: {message_row.message_id}")
         
         # Get filtered dataset to usein the prompt generation
         user_filtered_dataset = self._filter_by_user(message_row.user_id, message_row.business_id)
@@ -74,8 +54,6 @@ class ContextAssembler:
         # Bind daily notification summary and message events
         event_history_data = self._calc_event_history_by_message(user_filtered_dataset)
         user_filtered_dataset |= event_history_data
-
-        print(f"event_history_data={event_history_data}")
 
         # Load Prompt Builder to get the prompt
         builder = PromptBuilder(user_filtered_dataset)
@@ -105,37 +83,6 @@ class ContextAssembler:
             "user_business_history": user_business_history,
             "users": self._data.get("users")[self._data.get("users")["user_id"] == user_id],
         }
-
-    """
-    # @todo - old
-    def _filter_by_user_orig(self, user_id: str, business_id: str) -> dict:
-        # Filter user business history by the user and the business.
-        user_business_history = self._user_business_history[self._user_business_history["user_id"] == user_id]
-        message_history = self._message_history[self._message_history["user_id"] == user_id]
-        business_accounts = self._business_accounts
-
-        # @TODO - Not in use...yet
-        daily_notification_summary = None
-        message_events = None
-
-        if pd.notna(business_id) and business_id:
-            user_business_history = user_business_history[user_business_history["business_id"] == business_id]
-
-            # Now that we have filtered the user_business_history by user_id and business_id get the business accounts 
-            # this user has interacted with.
-            business_accounts = self._business_accounts[self._business_accounts["business_id"] == business_id]
-            message_history = message_history[message_history["business_id"] == business_id]
-        
-        return { 
-            "business_accounts": business_accounts,
-            "daily_notification_summary": None,
-            "group_members": self._group_members[self._group_members["user_id"] == user_id],
-            "message_events": None,
-            "message_history": message_history,
-            "user_business_history": user_business_history,
-            "users": self._users[self._users["user_id"] == user_id]
-        }
-    """
 
     def _filter_by_group(self, group_members: pd.DataFrame, group_id: str) -> dict:
         groups = self._data.get("groups")
@@ -321,4 +268,3 @@ class ContextAssembler:
         
         # Fallback if the image contains no readable text (e.g. standard photo)
         return "Image Description: Attached photograph/image file (No embedded text detected)."
-

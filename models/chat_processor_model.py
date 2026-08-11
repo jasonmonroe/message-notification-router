@@ -95,6 +95,7 @@ class ChatProcessorModel:
                 # You can parse the retry delay or default to a safe pause
                 delay_time = self._parse_delay_time(error_message)
                 log_chat_transcript("RATE LIMIT ERROR", error_message)
+                print(f"\n⏸️ Pausing for {delay_time} seconds...\n")
 
                 time.sleep(delay_time)
                 attempt += 1
@@ -127,38 +128,40 @@ class ChatProcessorModel:
         return delay_time
         
     def _filter_response(self, response: ChatCompletion) -> dict:
+        content_str = ""
         try:
-            if hasattr(response, "choices"):
+            if hasattr(response, "choices") and response.choices:
                 choice = response.choices[0]
-                content_str = choice.message.content
+                content_str = choice.message.content or ""
             elif hasattr(response, "content"):
-                content_str = response.content
+                content_str = response.content or ""
             elif isinstance(response, str):
                 content_str = response
             else:
                 content_str = str(response)
 
-            if not content_str:
+            if not content_str or not content_str.strip():
                 return {}
 
             cleaned_str = content_str.strip()
 
-            # Try extracting from markdown code blocks first
-            json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned_str, re.DOTALL)
-            if json_match:
-                cleaned_str = json_match.group(1)
-            else:
-                # Fallback: Find the first '{' and the last '}'
-                start_idx = cleaned_str.find("{")
-                end_idx = cleaned_str.rfind("}")
-                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                    cleaned_str = cleaned_str[start_idx:end_idx+1]
-                elif start_idx != -1:
-                    # Auto-repair if the model cut off right at the end before closing '}'
-                    cleaned_str = cleaned_str[start_idx:]
-                    if not cleaned_str.endswith("}"):
-                        cleaned_str += "\n}"
+            # 1. Strip markdown code fence markers if present
+            cleaned_str = re.sub(r"^```(?:json)?\s*", "", cleaned_str, flags=re.MULTILINE)
+            cleaned_str = re.sub(r"\s*```$", "", cleaned_str, flags=re.MULTILINE).strip()
 
+            # 2. Extract strictly from the FIRST '{' to the LAST '}' (Greedy search)
+            start_idx = cleaned_str.find("{")
+            end_idx = cleaned_str.rfind("}")
+
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                cleaned_str = cleaned_str[start_idx:end_idx + 1]
+            elif start_idx != -1:
+                # Auto-repair if the output was cut off before the closing brace
+                cleaned_str = cleaned_str[start_idx:]
+                if not cleaned_str.endswith("}"):
+                    cleaned_str += "\n}"
+
+            # 3. Parse JSON safely
             content = json.loads(cleaned_str.strip())
             return content
 
@@ -167,5 +170,28 @@ class ChatProcessorModel:
             print(f" `repr(content_str)` was: {repr(content_str)}")
             return {}
 
-    def _format_response(self, response: dict) -> list:
-        return list(response.values())
+    def _format_response(self, response: dict) -> dict:
+        if not response:
+            return {}
+
+        # Standardize evidence_message_ids
+        if "evidence_message_ids" in response:
+            ev = response["evidence_message_ids"]
+            
+            # Case 1: Python List / JSON Array
+            if isinstance(ev, list):
+                response["evidence_message_ids"] = "none" if not ev else ";".join(str(i) for i in ev)
+                    
+            # Case 2: Already a String
+            elif isinstance(ev, str):
+                cleaned = ev.strip()
+                if not cleaned or cleaned.lower() in ["none", "[]", "null"]:
+                    response["evidence_message_ids"] = "none"
+                else:
+                    response["evidence_message_ids"] = cleaned
+                    
+            # Case 3: None / Null
+            else:
+                response["evidence_message_ids"] = "none"
+
+        return response

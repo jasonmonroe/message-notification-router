@@ -45,99 +45,6 @@ class PromptBuilder:
         self._set_attrs(dataset)
 
         self.prompt = self._build(dataset.get("groups"))
-        #self.prompt = self.build(dataset.get("groups"))
-
-    """
-
-   
-
-    <routing_input>
-         <users>
-            <user id="u_011" role="sender"/>
-            <user id="u_006" role="recipient"/>
-        </users>
-
-        <!-- 1. LIVE INCOMING MESSAGE (from dataset/messages.csv) -->
-        <incoming_message 
-            id="msg_1042" 
-            conversation_type="group" 
-            group_id="group_003" 
-            business_id="" 
-            sender_id="u_011" 
-            target_user_id="u_006" 
-            created_at="2026-08-10 14:41:00" 
-            media_type="image" 
-            media_id="img_011" 
-            forwarded_count="0">
-            <message_text>School circular attached. Please check the timing and consent note.</message_text>
-        </incoming_message>
-
-        <!-- 2. RECIPIENT USER PROFILE & MACRO FATIGUE (users.csv + daily_notification_summary.csv) -->
-        <recipient_user id="u_006" quiet_hours="21:00-06:00">
-            <!-- Macro Fatigue from daily_notification_summary.csv -->
-            <macro_notification_summary>
-                <total_notifications_sent>82</total_notifications_sent>
-                <total_notifications_dismissed>30</total_notifications_dismissed>
-                <overall_dismissal_rate>0.366</overall_dismissal_rate>
-            </macro_notification_summary>
-            <!-- 30-Day Activity Baseline from users.csv -->
-            <thirty_day_stats opened="80" replied="23" dismissed="2" reported="0" />
-        </recipient_user>
-
-        <!-- 3. SENDER SENSITIVITY & MICRO METRICS (from message_events.csv aggregated by sender) -->
-        <sender_metadata id="u_011" type="user">
-            <micro_interaction_stats open_rate="0.706" reply_rate="0.647" />
-        </sender_metadata>
-
-        <!-- 4. GROUP CHAT METADATA & RELATIONSHIP (groups.csv + group_members.csv) -->
-        <group_metadata 
-            id="group_003" 
-            group_type="school_group" 
-            user_role="admin" 
-            user_mute_status="Unmuted" 
-            joined_at="2024-06-15">
-            <group_name>International School Parents Group</group_name>
-        </group_metadata>
-
-        <!-- 5. BUSINESS ACCOUNT METADATA & HISTORY (business_accounts.csv + user_business_history.csv) -->
-        <!-- Included if conversation_type="business" or business_id is populated -->
-        <business_metadata 
-            id="b_001" 
-            name="Acme Logistics" 
-            verification_tier="verified" 
-            account_age_days="450" 
-            reports_count="0">
-            <user_relationship 
-                order_count="5" 
-                last_transaction="2026-08-01" 
-                opt_in_status="true" />
-        </business_metadata>
-
-        <!-- 6. USER BEHAVIOR PROFILE & HISTORICAL INTERACTIONS (message_history.csv + message_events.csv) -->
-        <user_behavior_profile user_id="u_006">
-            <historical_interactions total_records="2">
-                <interaction message_id="message_0051" date="2026-06-11 07:08:00" sender_id="u_011">
-                    <content_preview>Parents, the field-trip circular is attached. Please check pickup timing, consent form, and ID-card note before 6 PM.</content_preview>
-                    <reaction opened="1" replied="1" reaction_time_minutes="2.0" dismissed="0" muted_after="0" reported="0" />
-                </interaction>
-                <interaction message_id="message_0182" date="2026-05-23 17:57:00" sender_id="u_011">
-                    <content_preview>Route B bus is leaving 15 minutes early today because the main signal road is blocked.</content_preview>
-                    <reaction opened="1" replied="0" reaction_time_minutes="12.0" dismissed="0" muted_after="0" reported="0" />
-                </interaction>
-            </historical_interactions>
-        </user_behavior_profile>
-
-        <!-- 7. MULTIMODAL MEDIA ATTACHMENTS (images.csv / voice_notes.csv + OCR / ASR) -->
-        <media_attachment status="present">
-            <metadata id="img_011" type="image" file_path="media/images/img_011.jpg" />
-            <description><![CDATA[Extracted Image Text (OCR): FIELD TRIP CONSENT FORM
-    Trip Destination: City Zoo | Date: 2026-08-15
-    Departure Time: 08:00 AM | Return Time: 03:00 PM
-    Transportation: School Bus
-    Signature of Parent/Guardian required for participation.]]></description>
-        </media_attachment>
-    </routing_input>
-    """
 
     def _set_attrs(self, dataset: dict) -> None:
         for key, value in dataset.items():
@@ -188,6 +95,7 @@ class PromptBuilder:
             return None
 
         users = xml.SubElement(root, "users")
+        users.append(xml.Comment(" Basic user notification behavior of sender and reciever "))
 
         if valid_sender:
             xml.SubElement(users, "user", id=str(sender_id).strip(), role="sender")
@@ -219,6 +127,7 @@ class PromptBuilder:
                 attrs[attr_name] = str(val).strip()
 
         incoming_message = xml.SubElement(root, "incoming_message", attrs)
+        incoming_message.append(xml.Comment(" ⚠️ Crucial: Incoming messages that your system must route "))
 
         text_val = msg.get("message_text")
         if pd.notna(text_val) and str(text_val).strip() != "":
@@ -244,6 +153,7 @@ class PromptBuilder:
                 attrs["do_not_disturb_window"] = str(dnd).strip()
 
         recipient_user = xml.SubElement(root, "recipient_user", attrs)
+        recipient_user.append(xml.Comment(" Total notification stats of recipient "))
 
         # Macro Notification Summary (pre-calculated by ContextAssembler)
         if hasattr(self, "notifications") and isinstance(self.notifications, dict) and self.notifications:
@@ -272,53 +182,6 @@ class PromptBuilder:
 
         return recipient_user
 
-
-    def _recipient_user_xml_old(self, root: xml.Element) -> xml.Element | None:
-        target_user_id = self.message.get("user_id") if isinstance(self.message, dict) else None
-        
-        user_row = None
-        if self.users is not None and not self.users.empty:
-            user_row = self.users.iloc[0]
-
-        attrs = {}
-        if pd.notna(target_user_id) and str(target_user_id).strip() != "":
-            attrs["id"] = str(target_user_id).strip()
-
-        if user_row is not None:
-            dnd = user_row.get("do_not_disturb_window") if "do_not_disturb_window" in user_row else user_row.get("dnd_window")
-            if pd.notna(dnd) and str(dnd).strip() != "":
-                attrs["do_not_disturb_window"] = str(dnd).strip()
-
-        recipient_user = xml.SubElement(root, "recipient_user", attrs)
-
-        # Macro Notification Summary from daily_notification_summary dataframe
-        if self.daily_notification_summary is not None and not self.daily_notification_summary.empty:
-            sent_sum = self.daily_notification_summary["notifications_sent"].sum() if "notifications_sent" in self.daily_notification_summary else 0
-            dismissed_sum = self.daily_notification_summary["notifications_dismissed"].sum() if "notifications_dismissed" in self.daily_notification_summary else 0
-
-            if sent_sum > 0 or dismissed_sum > 0:
-                macro_elem = xml.SubElement(recipient_user, "macro_notification_summary")
-                xml.SubElement(macro_elem, "total_notifications_sent").text = str(int(sent_sum))
-                xml.SubElement(macro_elem, "total_notifications_dismissed").text = str(int(dismissed_sum))
-                
-                rate = round(dismissed_sum / max(sent_sum, 1), 3)
-                xml.SubElement(macro_elem, "overall_dismissal_rate").text = str(rate)
-
-        # 30-Day Activity Baseline from users dataframe
-        if user_row is not None:
-            stats_attrs = {}
-            for metric in ["opened", "replied", "dismissed", "reported"]:
-                col_candidates = [f"thirty_day_{metric}", f"messages_{metric}_30d", f"recent_{metric}"]
-                for col in col_candidates:
-                    if col in user_row and pd.notna(user_row[col]) and str(user_row[col]).strip() != "":
-                        stats_attrs[metric] = str(user_row[col]).strip()
-                        break
-
-            if stats_attrs:
-                xml.SubElement(recipient_user, "thirty_day_stats", stats_attrs)
-
-        return recipient_user
-
     def _sender_xml(self, root: xml.Element) -> xml.Element | None:
         sender_id = self.message.get("sender_user_id") if isinstance(self.message, dict) else None
         if not sender_id or pd.isna(sender_id) or str(sender_id).strip() == "":
@@ -326,6 +189,7 @@ class PromptBuilder:
 
         attrs = {"id": str(sender_id).strip(), "type": "user"}
         sender_elem = xml.SubElement(root, "sender_metadata", attrs)
+        sender_elem.append(xml.Comment(" User or Business Sender Profile "))
 
         # Micro Interaction Stats calculated from message_events
         if self.message_events is not None and not self.message_events.empty:
@@ -375,6 +239,7 @@ class PromptBuilder:
                 attrs["joined_at"] = str(joined_val).strip()
 
         group_elem = xml.SubElement(root, "group_metadata", attrs)
+        group_elem.append(xml.Comment(" Basic information about each group chat along with how each user relates to each group "))
 
         if group_row is not None and "group_name" in group_row and pd.notna(group_row["group_name"]) and str(group_row["group_name"]).strip() != "":
             name_elem = xml.SubElement(group_elem, "group_name")
@@ -408,6 +273,7 @@ class PromptBuilder:
                         attrs[attr_name] = str(bus_row[col_name]).strip()
 
         bus_elem = xml.SubElement(root, "business_metadata", attrs)
+        bus_elem.append(xml.Comment(" Information about business senders "))
 
         if rel_row is not None:
             rel_attrs = {}
@@ -433,11 +299,11 @@ class PromptBuilder:
             return None
 
         profile_elem = xml.SubElement(root, "user_behavior_profile", {"user_id": str(target_user_id).strip()})
-        profile_elem.append(xml.Comment("USER BEHAVIOR PROFILE & HISTORICAL INTERACTIONS"))
+        profile_elem.append(xml.Comment(" How users reacted to those past messages or has a recent relationship with a business "))
 
         # Merge message history with events if available
         if self.message_events is not None and not self.message_events.empty:
-            merged = pd.merge(self.message_history, self.message_events, on=["message_id", "user_id"], how="left")
+            merged = pd.merge(self.message_history.copy(), self.message_events, on=["message_id", "user_id"], how="left")
         else:
             merged = self.message_history.copy()
 
@@ -462,7 +328,7 @@ class PromptBuilder:
                 int_attrs["sender_id"] = str(sender_id).strip()
 
             interaction = xml.SubElement(interactions_elem, "interaction", int_attrs)
-
+            
             if "message_text" in row and pd.notna(row["message_text"]) and str(row["message_text"]).strip() != "":
                 preview = xml.SubElement(interaction, "content_preview")
                 preview.text = str(row["message_text"]).strip()
@@ -493,14 +359,24 @@ class PromptBuilder:
             return None
 
         media_elem = xml.SubElement(root, "media_attachment", {"status": "present"})
-        media_elem.append(xml.Comment("(Optional) MULTIMODAL MEDIA ATTACHMENTS (Voice Note Audio Transcription via Whisper)"))
+
+        media_id = self.message.get("media_id")
+        media_type = self.message.get("media_type")
+
+        comment = ""
+        if media_type == "voice":
+            comment = "Voice Note Audio Transcription via Whisper"
+        elif media_type == "image":
+            comment = "Extracted Image Text Optical Character Recognition (OCR) via Tesseract-OCR Engine"
+
+        media_elem.append(xml.Comment(f" (Optional) MULTIMODAL MEDIA ATTACHMENTS ({comment})" ))
 
         meta_attrs = {}
         if isinstance(self.message, dict):
-            if self.message.get("media_id") and pd.notna(self.message.get("media_id")):
-                meta_attrs["id"] = str(self.message.get("media_id")).strip()
-            if self.message.get("media_type") and pd.notna(self.message.get("media_type")):
-                meta_attrs["type"] = str(self.message.get("media_type")).strip()
+            if media_id and pd.notna(media_id):
+                meta_attrs["id"] = str(media_id).strip()
+            if media_type and pd.notna(media_type):
+                meta_attrs["type"] = str(media_type).strip()
 
         if has_filepath:
             meta_attrs["file_path"] = str(self.media_filepath).strip()
@@ -513,185 +389,3 @@ class PromptBuilder:
             desc_elem.text = str(self.media_description).strip()
 
         return media_elem
-
-
-    # --- Format Attributes  (old way) --- #
-
-     # @todo - old way
-    def build_orig(self, groups: pd.DataFrame) -> str:
-        return ROUTING_PROMPT_TEMPLATE.format(            
-            business_sender_context=self._format_business_sender_xml(),
-            group_metadata_context=self._format_group_metadata_xml(groups),
-            historical_evidence=self._format_historical_evidence_xml(),
-            incoming_message_context=self._format_incoming_message_xml(),
-            media_context=self._format_media_context_xml(),
-            
-            message_id=self.message.get("message_id"),
-            recipient_user_context=self._format_recipient_user_context_xml(),
-            user_behavioral_profile_context=self._format_user_behavioral_profile_context_xml(),
-        )
-
-    def _format_incoming_message_xml(self) -> str:
-        group_id = self.message.get("group_id") if pd.notna(self.message.get("group_id")) and self.message.get("group_id").strip() else ""
-        sender_or_business_id = self.message.get("business_id") if pd.notna(self.message.get("business_id")) else (self.message.get("send_user_id") if pd.notna(self.message.get("send_user_id")) else "")
-        message_text = self.message.get("message_text") if pd.notna(self.message.get("message_text")) else "[Media Message]"
-        media_type = self.message.get("media_type") if pd.notna(self.message.get("media_type")) else "None"
-         
-        return """<incoming_message id="{message_id}" conversation_type="{conversation_type}" group_id="{group_id}" sender_id="{sender_or_business_id}" target_user_id="{user_id}" created_at="{created_at}" media_type="{media_type}" forwarded_count="{forwarded_count} ">\n\t<message_text>{message_text}</message_text>\n</incoming_message>""".strip().format(
-            message_id=self.message.get("message_id"),
-            conversation_type=self.message.get("conversation_type"),
-            group_id=group_id,
-            sender_or_business_id=sender_or_business_id,
-            user_id=self.message.get("user_id"),
-            created_at=self.message.get("created_at"),
-            message_text=message_text,
-            media_type=media_type,
-            forwarded_count=self.message.get("forwarded_count"),
-        )
-
-    def _format_business_sender_xml(self) -> str:
-        # If the current message has no business ID, it's a personal or group message. Skip business context entirely!
-        if pd.isna(self.message.get("business_id")) or not self.message.get("business_id"):
-            return ""
-        
-        business_df = self.business_accounts
-        business_history_df = self.user_business_history
-
-        def _get_business_info_xml_open(business_df: pd.DataFrame) -> str:
-            business_info = ""
-            if business_df is not None and not business_df.empty:
-                business_row = business_df.iloc[0]
-
-                business_info = """<business_sender id="{business_id}" type="sender" name="{name}" category="{category}" verified="{verified}" sender_domain="{sender_domain}">""".strip().format(
-                    business_id=self.message.get("business_id"),
-                    name=business_row.get("display_name", self.message.get("brand_name")),
-                    category=business_row.get("category"),
-                    verified="true" if business_row.get("verified") == 1 else "false",
-                    sender_domain=business_row.get("domain_used_by_sender", ""),
-                )
-
-            return business_info
-
-        def _get_history_info_xml(business_history_df: pd.DataFrame) -> str:
-
-            history_info_xml = ""
-            if business_history_df is not None and not business_history_df.empty:
-
-                # Filter history for this specific business/user if needed and dynamically check for whatever columns actually exist in your dataframe.
-                history_rows = []
-                for _, row in business_history_df.iterrows():
-                    # Use real columns present in your dataset rows: action, message_type, created_at     
-                    xml_content = """<interaction user_id="{user_id}" relation="{why_user_knows_account}" last_reply_at="{last_reply_at}" last_activity="{last_activity_at}"/>""".strip().format(
-                        last_activity_at=row.get("last_activity_at") if row.get("last_activity_at") else "",
-                        last_reply_at=row.get("last_reply_at") if pd.notna(row.get("last_reply_at")) and str(row.get("last_reply_at")).strip() else "",
-                        user_id=row.get("user_id"),
-                        why_user_knows_account=row.get("why_user_knows_account"),
-                    )
-                
-                    # Format each row as a clean self-closing XML tag
-                    history_rows.append(xml_content)
-                    
-                history_info_xml = "\n".join(history_rows)
-           
-            return history_info_xml
-
-        business_info_xml_open = _get_business_info_xml_open(business_df)
-        history_info_xml = _get_history_info_xml(business_history_df)
-        business_info_xml_close = "</business_sender>\n"
-
-        return f"""{business_info_xml_open}\n\t<interactions>\n\t\t{history_info_xml}\n\t</interactions>\n{business_info_xml_close}\n""".strip() 
-
-    def _format_group_metadata_xml(self, groups_df: pd.DataFrame) -> str:
-        # Filter for the target group
-        group_members_row = self.group_members[
-            (self.group_members["group_id"] == self.message.get("group_id")) & 
-            (self.group_members["user_id"] == self.message.get("user_id"))
-        ]
-        
-        # No group membership data found for this user.
-        if group_members_row.empty:
-            return ""
-        
-        # Extract user-specific data
-        group_muted_by_user = group_members_row["group_muted_by_user"].iloc[0]
-        muted_by_user = "Muted" if group_muted_by_user == 1 else "Unmuted"
-        group_user_role = group_members_row["role"].iloc[0]
-        
-        # Safely extract group-specific metadata
-        group_name = groups_df["group_name"].iloc[0] if not groups_df.empty and "group_name" in groups_df else self.message.get("group_id")
-        group_type = groups_df["group_type"].iloc[0] if not groups_df.empty and "group_type" in groups_df else "unknown"
-        
-        # Formats as a clean, vertical, token-optimized markdown list
-        return """<group_metadata id="{group_id}" type="{group_type}" user_role="{group_user_role}" joined_at="{group_joined_at}" user_mute_status="{group_muted_by_user}">\n\t<group_name>{group_name}</group_name>\n</group_metadata>""".strip().format(
-            group_id=self.message.get("group_id"),
-            group_name=group_name,
-            group_type=group_type,
-            group_joined_at=group_members_row["joined_at"].iloc[0],
-            group_user_role=group_user_role,
-            group_muted_by_user=muted_by_user,
-        )
-
-    def _format_historical_evidence_xml(self) -> str:
-        # No relevant historical message evidence found.
-        if self.message_history is None or self.message_history.empty:
-            return ""
-        
-        # Take up to 5 recent historical messages as evidence context
-        recent_history = self.message_history.head(MAX_HISTORICAL_MESSAGES)
- 
-        xml_open = """<historical_evidence status="optional">""".strip()
-        xml_close = "</historical_evidence>"
-       
-        xml_messages = []
-        for _, row in recent_history.iterrows():
-            message_text = row.get("message_text") if pd.notna(row.get("message_text")) and str(row.get("message_text")).strip() else ""
-    
-            xml_message = """<message id="{message_id}" date="{created_at}">{message_text}</message>""".strip().format(
-                message_id=row.get("message_id"),
-                created_at=row.get("created_at"),
-                message_text=message_text.strip(),
-            )
-
-            xml_messages.append(f"\t{xml_message}")
-       
-        xml_content = "\n".join(xml_messages)
-        
-        return f"{xml_open}\n{xml_content}\n{xml_close}".strip()
-
-    def _format_media_context_xml(self) -> str:
-        if self.media_description:
-            return """<media_attachment status="optional">\n\t<metadata id="{media_id}" type="{media_type}" filename="{media_filename}" />\n\t<description>{media_content_description}</description>\n</media_attachment>""".strip().format(
-                    media_id=self.message.get("media_id"),
-                    media_type=self.message.get("media_type"),
-                    media_filename=os.path.basename(self.media_filepath),
-                    media_content_description=self.media_description.strip(),
-                )
-
-        return ""
-
-    def _format_recipient_user_context_xml(self) -> str:
-        # No specific user profile data found.
-        if self.users is None or self.users.empty:
-            return ""
-        
-        # User row from users.csv
-        user = self.users.iloc[0]
-
-        return """<recipient_user id="{user_id}" type="recipient" dnd_window="{do_not_disturb_window}">\n\t<stats thirty_day_opened="{messages_opened_30d}" thirty_day_replied="{messages_replied_30d}" thirty_day_dismissed="{messages_reported_30d}" thirty_day_reported="{notifications_dismissed_30d}" />\n</recipient_user>""".strip().format(
-            do_not_disturb_window=user.get("do_not_disturb_window", "None"),
-            messages_opened_30d=user.get("messages_opened_30d", 0),
-            messages_replied_30d=user.get("messages_replied_30d", 0),
-            messages_reported_30d=user.get("messages_reported_30d", 0),
-            notifications_dismissed_30d=user.get("notifications_dismissed_30d", 0),
-            user_id=user.get("user_id", self.message.get("user_id")),
-        )
-
-    def _format_user_behavioral_profile_context_xml(self) -> str:
-        return ""
-
-        return """<user_behavioral_profile user_id="{user_id}">\n\t
-        <></>\n\t
-        <></>\n
-        </user_behavioral_profile>""".strip().format(
-            user_id=self.message.get("user_id"),
-        )

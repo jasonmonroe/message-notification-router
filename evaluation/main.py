@@ -33,17 +33,17 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
     output_rows = []
     for row in messages_df.itertuples():
         print(f"\nrow.Index = {row.Index} | message ID: {row.message_id}")
-        if row.message_id == "sample_msg_046": #row.Index == 0:
+        if row.Index >= 0:
+        #if row.message_id == "sample_msg_049": 
             log_chat_transcript("PROMPT_ASSEMBLY", f"Assembling prompt for index: {row.Index}, message ID: {row.message_id}")
 
             start_time = start_timer()
             prompt = assembler.build_prompt_by_user(row)
-            print(prompt)
             log_chat_transcript("PROMPT_BUILT", prompt) # Logs the exact XML/Text sent to the LLM
-            continue
+         
             response = chat_model.get_response(prompt, row.Index) # response is a list
             log_chat_transcript("LLM_RESPONSE", response)
-    
+            print(response)
             if not response:
                 print(f"\nNo response was given due to an error.  Breaking loop at index {row.Index}.")
                 break

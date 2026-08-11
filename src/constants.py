@@ -83,62 +83,8 @@ Evaluate your certainty for the chosen action on a scale from 0.0 to 1.0:
 - General chat, promotional broadcasts, or automated alerts from a muted group must remain 'muted' or sent to 'digest'.
 """.strip()
 
-
-
 ROUTING_PROMPT_TEMPLATE = """
-## USER - BUSINESS MESSAGE DATA
-
-<routing_input>
-    {incoming_message_context}
-
-    {business_sender_context}
-
-    {recipient_user_context}
-
-    {group_metadata_context}
-
-    <!-- Below is the historical background and notification activity for the target user -->
-    {user_behavioral_profile_context}
-
-    <!-- Optional Data -->
-    {historical_evidence}
-
-    {media_context}
-</routing_input>
-
-
-## TASK INSTRUCTIONS
-Analyze the incoming message, user preferences, sender verification, and history. 
-Pay special attention to whether an incoming message represents an active, time-sensitive transaction that overrides a muted group state.
-Decide whether this message should be:
-1. `notify` (interrupt now)
-2. `digest` (save for later)
-3. `mute` (suppress as low-value, repetitive, or unsafe)
- 
-CRITICAL OUTPUT REQUIREMENT:
-Return your response as a valid JSON object wrapped inside a markdown code block (```json ... ```). 
-
-**The JSON structure below is a template/blueprint.** Do not use the sample IDs or values from it. Populate all keys using the *actual data, IDs, and decisions* derived from the prompt context above:
-
-{{
-    "message_id": "sample_msg_041",
-    "action": "notify", 
-    "message_type": "transaction",
-    "reason": "Explain your decision here...",
-    "confidence": 0.85,
-    "evidence_message_ids": ["message_0046"] 
-}}
-
-**IMPORTANT RULES:**
-1. JSON object keys must be in the exact order shown above. Do not deviate!
-2. Replace all placeholder values with real data from the current context.
-""".strip()
-
-
-
-
-ROUTING_PROMPT_TEMPLATE = """
-## XML ROUTING DATA
+## </> XML ROUTING DATA
 
 {routing_input_xml}
 

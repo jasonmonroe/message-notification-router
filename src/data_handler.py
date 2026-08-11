@@ -53,12 +53,12 @@ class DataHandler:
 
         # Override messages with sample if necessary
         if self._use_sample:
-            log_chat_transcript("DATA_HANDLER", "Loading sample messages.")
+            log_chat_transcript("DATA_HANDLER", "Loading randomized sample messages.")
             self.messages = pd.read_csv(os.path.join(DATASET_DIR, "sample_messages.csv"))
 
             # Randomize row data
-            #print("Sample data is now being shuffled...")
-            #self.messages = self.messages.sample(frac=1).reset_index(drop=True)
+            print("Sample data is now being shuffled...")
+            self.messages = self.messages.sample(frac=1).reset_index(drop=True)
 
     def save_output(self, csv_rows: list) -> None: 
         """
@@ -244,5 +244,4 @@ class DataHandler:
             # Delay x miliseconds before closing image
             cv2.waitKey(MSEC)
             cv2.destroyAllWindows()
-        
     
