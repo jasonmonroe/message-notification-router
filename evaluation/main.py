@@ -40,12 +40,12 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
             start_time = start_timer()
             prompt = assembler.build_prompt_by_user(row)
             log_chat_transcript("PROMPT_BUILT", prompt) # Logs the exact XML/Text sent to the LLM
-         
+             
             response = chat_model.get_response(prompt, row.Index) # response is a list
             log_chat_transcript("LLM_RESPONSE", response)
-            print(response)
+           
             if not response:
-                print(f"\nNo response was given due to an error.  Breaking loop at index {row.Index}.")
+                print(f"\n🚨 No response was given due to an error.  Breaking loop at index {row.Index}.\n")
                 break
 
             log_chat_transcript("LLM_RESPONSE_TIME", get_time(start_time))

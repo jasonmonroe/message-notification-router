@@ -86,10 +86,10 @@ class PromptBuilder:
 
     def _users_xml(self, root: xml.Element) -> xml.Element | None:
         sender_id = self.message.get("sender_user_id") if isinstance(self.message, dict) else None
-        target_user_id = self.message.get("user_id") if isinstance(self.message, dict) else None
+        recipient_user_id = self.message.get("user_id") if isinstance(self.message, dict) else None
 
         valid_sender = pd.notna(sender_id) and str(sender_id).strip() != ""
-        valid_recipient = pd.notna(target_user_id) and str(target_user_id).strip() != ""
+        valid_recipient = pd.notna(recipient_user_id) and str(recipient_user_id).strip() != ""
 
         if not valid_sender and not valid_recipient:
             return None
@@ -101,7 +101,7 @@ class PromptBuilder:
             xml.SubElement(users, "user", id=str(sender_id).strip(), role="sender")
 
         if valid_recipient:
-            xml.SubElement(users, "user", id=str(target_user_id).strip(), role="recipient")
+            xml.SubElement(users, "user", id=str(recipient_user_id).strip(), role="recipient")
 
         return users
 
@@ -115,7 +115,7 @@ class PromptBuilder:
             "group_id": msg.get("group_id"),
             "business_id": msg.get("business_id"),
             "sender_id": msg.get("sender_user_id"),
-            "target_user_id": msg.get("user_id"),
+            "recipient_user_id": msg.get("user_id"),
             "created_at": msg.get("created_at"),
             "media_type": msg.get("media_type"),
             "media_id": msg.get("media_id"),
@@ -137,15 +137,15 @@ class PromptBuilder:
         return incoming_message
 
     def _recipient_user_xml(self, root: xml.Element) -> xml.Element | None:
-        target_user_id = self.message.get("user_id") if isinstance(self.message, dict) else None
+        recipient_user_id = self.message.get("user_id") if isinstance(self.message, dict) else None
         
         user_row = None
         if self.users is not None and not self.users.empty:
             user_row = self.users.iloc[0]
 
         attrs = {}
-        if pd.notna(target_user_id) and str(target_user_id).strip() != "":
-            attrs["id"] = str(target_user_id).strip()
+        if pd.notna(recipient_user_id) and str(recipient_user_id).strip() != "":
+            attrs["id"] = str(recipient_user_id).strip()
 
         if user_row is not None:
             dnd = user_row.get("do_not_disturb_window") if "do_not_disturb_window" in user_row else user_row.get("dnd_window")
@@ -248,16 +248,16 @@ class PromptBuilder:
         return group_elem
 
     def _business_xml(self, root: xml.Element) -> xml.Element | None:
-        bus_id = self.message.get("business_id") if isinstance(self.message, dict) else None
-        if not bus_id or pd.isna(bus_id) or str(bus_id).strip() == "":
+        business_id = self.message.get("business_id") if isinstance(self.message, dict) else None
+        if not business_id or pd.isna(business_id) or str(business_id).strip() == "":
             return None
 
-        bus_row = self.business_accounts.iloc[0] if (self.business_accounts is not None and not self.business_accounts.empty) else None
-        rel_row = self.user_business_history.iloc[0] if (self.user_business_history is not None and not self.user_business_history.empty) else None
+        business_row = self.business_accounts.iloc[0] if (self.business_accounts is not None and not self.business_accounts.empty) else None
+        user_relationship_row = self.user_business_history.iloc[0] if (self.user_business_history is not None and not self.user_business_history.empty) else None
 
-        attrs = {"id": str(bus_id).strip()}
+        attrs = {"id": str(business_id).strip()}
 
-        if bus_row is not None:
+        if business_row is not None:
             field_mappings = [
                 ("display_name", "name"), 
                 ("business_name", "name"), 
@@ -268,37 +268,37 @@ class PromptBuilder:
             ]
 
             for col_name, attr_name in field_mappings:
-                if col_name in bus_row and pd.notna(bus_row[col_name]) and str(bus_row[col_name]).strip() != "":
+                if col_name in business_row and pd.notna(business_row[col_name]) and str(business_row[col_name]).strip() != "":
                     if attr_name not in attrs:  # Avoid overwriting
-                        attrs[attr_name] = str(bus_row[col_name]).strip()
+                        attrs[attr_name] = str(business_row[col_name]).strip()
 
-        bus_elem = xml.SubElement(root, "business_metadata", attrs)
-        bus_elem.append(xml.Comment(" Information about business senders "))
+        business_elem = xml.SubElement(root, "business_metadata", attrs)
+        business_elem.append(xml.Comment(" Information about business senders "))
 
-        if rel_row is not None:
-            rel_attrs = {}
-            rel_mappings = [
+        if user_relationship_row is not None:
+            user_relationship_attrs = {}
+            user_relationship_mappings = [
                 ("order_count", "order_count"), 
                 ("last_transaction", "last_transaction"), 
                 ("opt_in_status", "opt_in_status"),
                 ("why_user_knows_account", "relation")
             ]
-            for col_name, attr_name in rel_mappings:
-                if col_name in rel_row and pd.notna(rel_row[col_name]) and str(rel_row[col_name]).strip() != "":
-                    rel_attrs[attr_name] = str(rel_row[col_name]).strip()
+            for col_name, attr_name in user_relationship_mappings:
+                if col_name in user_relationship_row and pd.notna(user_relationship_row[col_name]) and str(user_relationship_row[col_name]).strip() != "":
+                    user_relationship_attrs[attr_name] = str(user_relationship_row[col_name]).strip()
 
-            if rel_attrs:
-                xml.SubElement(bus_elem, "user_relationship", rel_attrs)
+            if user_relationship_attrs:
+                xml.SubElement(business_elem, "user_relationship", user_relationship_attrs)
 
-        return bus_elem
+        return business_elem
 
     def _user_behavior_profile_xml(self, root: xml.Element) -> xml.Element | None:
-        target_user_id = self.message.get("user_id") if isinstance(self.message, dict) else ""
+        recipient_user_id = self.message.get("user_id") if isinstance(self.message, dict) else ""
         
         if self.message_history is None or self.message_history.empty:
             return None
 
-        profile_elem = xml.SubElement(root, "user_behavior_profile", {"user_id": str(target_user_id).strip()})
+        profile_elem = xml.SubElement(root, "user_behavior_profile", {"user_id": str(recipient_user_id).strip()})
         profile_elem.append(xml.Comment(" How users reacted to those past messages or has a recent relationship with a business "))
 
         # Merge message history with events if available
@@ -319,9 +319,9 @@ class PromptBuilder:
         for _, row in history_subset.iterrows():
             int_attrs = {"message_id": str(row["message_id"]).strip()}
             
-            created_at = row.get("created_at", row.get("date"))
+            created_at = row.get("created_at")
             if pd.notna(created_at) and str(created_at).strip() != "":
-                int_attrs["date"] = str(created_at).strip()
+                int_attrs["created_at"] = str(created_at).strip()
 
             sender_id = row.get("sender_user_id") if pd.notna(row.get("sender_user_id")) else row.get("business_id")
             if pd.notna(sender_id) and str(sender_id).strip() != "":
@@ -333,21 +333,21 @@ class PromptBuilder:
                 preview = xml.SubElement(interaction, "content_preview")
                 preview.text = str(row["message_text"]).strip()
 
-            rx_attrs = {}
-            reaction_cols = [
+            behavior_attrs = {}
+            behavior_cols = [
                 ("message_opened", "opened"), 
                 ("message_replied", "replied"), 
-                ("reaction_time_minutes", "reaction_time_minutes"), 
+                ("behavior_time_minutes", "behavior_time_minutes"), 
                 ("notification_dismissed", "dismissed"), 
                 ("muted_after_message", "muted_after"), 
                 ("message_reported", "reported")
             ]
-            for col_name, attr_name in reaction_cols:
+            for col_name, attr_name in behavior_cols:
                 if col_name in row and pd.notna(row[col_name]) and str(row[col_name]).strip() != "":
-                    rx_attrs[attr_name] = str(row[col_name]).strip()
+                    behavior_attrs[attr_name] = str(row[col_name]).strip()
 
-            if rx_attrs:
-                xml.SubElement(interaction, "reaction", rx_attrs)
+            if behavior_attrs:
+                xml.SubElement(interaction, "behavior", behavior_attrs)
 
         return profile_elem
 
@@ -365,11 +365,11 @@ class PromptBuilder:
 
         comment = ""
         if media_type == "voice":
-            comment = "Voice Note Audio Transcription via Whisper"
+            comment = "- Voice Note Audio Transcription via Whisper"
         elif media_type == "image":
-            comment = "Extracted Image Text Optical Character Recognition (OCR) via Tesseract-OCR Engine"
+            comment = "- Extracted Image Text Optical Character Recognition (OCR) via Tesseract-OCR Engine"
 
-        media_elem.append(xml.Comment(f" (Optional) MULTIMODAL MEDIA ATTACHMENTS ({comment})" ))
+        media_elem.append(xml.Comment(f" (Optional) Multimodal Media Attachment ({comment})" ))
 
         meta_attrs = {}
         if isinstance(self.message, dict):

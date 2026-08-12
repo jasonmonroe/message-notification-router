@@ -29,7 +29,7 @@ from src.utils import log_chat_transcript, show_banner
 class ChatProcessorModel:
     def __init__(self, row_cnt: int):
         if MODEL_API_URL is None or MODEL_NAME is None or MODEL_API_KEY is None:
-            raise ValueError("🚨 Credentials aren't properly being read. Check .env file. 🚨")
+            raise ValueError("🚨 Credentials aren't properly being read. Check environment file. 🚨")
              
         subtitles = [
             f"🤖MODEL_NAME: {MODEL_NAME}",
@@ -84,7 +84,7 @@ class ChatProcessorModel:
             except RateLimitError as e:
                 print(f"\n🚨 Idx: {row_index} | Rate limit / Quota exceeded (429) on attempt: {attempt} 🚨")
 
-                if attempt >= RATE_LIMIT_RETRIES:
+                if attempt >= RATE_LIMIT_RETRIES - 1:
                     print(f"\n🚨 Idx: {row_index} | {self.name} request has exceeded the maximum amount of retries! Returning {{error: True}}. 🚨")
                     return {"error": True}
 
@@ -95,7 +95,7 @@ class ChatProcessorModel:
                 # You can parse the retry delay or default to a safe pause
                 delay_time = self._parse_delay_time(error_message)
                 log_chat_transcript("RATE LIMIT ERROR", error_message)
-                print(f"\n⏸️ Pausing for {delay_time} seconds...\n")
+                print(f"\n⏸️  Pausing for {delay_time} seconds ...")
 
                 time.sleep(delay_time)
                 attempt += 1
@@ -108,8 +108,8 @@ class ChatProcessorModel:
         # Let's attempt to use the vendor's response delay time suggestion instead of our own.
         err = error_message.lower()
         anchor_str = "please retry in "
-        end_char = "s." # Safely skips the decimal point
-
+        end_char = "s" # Safely skips the decimal point
+        
         if anchor_str not in err or end_char not in err:
             return RATE_LIMIT_PAUSE_TIMER
         
@@ -174,7 +174,6 @@ class ChatProcessorModel:
         if not response:
             return {}
 
-        # Standardize evidence_message_ids
         if "evidence_message_ids" in response:
             ev = response["evidence_message_ids"]
             
@@ -182,15 +181,12 @@ class ChatProcessorModel:
             if isinstance(ev, list):
                 response["evidence_message_ids"] = "none" if not ev else ";".join(str(i) for i in ev)
                     
-            # Case 2: Already a String
+            # Case 2: String representation
             elif isinstance(ev, str):
                 cleaned = ev.strip()
-                if not cleaned or cleaned.lower() in ["none", "[]", "null"]:
-                    response["evidence_message_ids"] = "none"
-                else:
-                    response["evidence_message_ids"] = cleaned
-                    
-            # Case 3: None / Null
+                response["evidence_message_ids"] = "none" if not cleaned or cleaned.lower() in ["none", "[]", "null"] else cleaned
+
+            # Case 3: None / Null / Unexpected types
             else:
                 response["evidence_message_ids"] = "none"
 
