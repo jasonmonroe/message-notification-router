@@ -23,7 +23,7 @@ import warnings
 
 # Local Libraries
 from evaluation.main import run_data_pipeline, run_message_reviewer_pipeline
-from src.constants import APP_NAME, ARGS_LIST
+from src.constants import APP_NAME, ARGS_LIST, OUTPUT_FILEPATH
 from src.utils import get_time, log_chat_transcript, gen_run_id, show_banner, show_timer, start_timer
  
  
@@ -36,8 +36,8 @@ def run_main_pipeline(args: list):
     output_rows = run_message_reviewer_pipeline(data_handler)
     
     log_chat_transcript("OUTPUT DATA", output_rows)
-    data_handler.save_output(output_rows)
-
+    
+    return data_handler.save_output(output_rows)
 
 def parse_args(command_line_args: list[str]) -> dict:
     return {arg.strip("--"): (arg in command_line_args) for arg in ARGS_LIST}
@@ -57,7 +57,12 @@ if __name__ == "__main__":
 
     # Start Chat Transcript Logging
     log_chat_transcript("PIPELINE_INIT", f"Initialized pipeline with arguments: {args}")
-    run_main_pipeline(args)
+    result = run_main_pipeline(args)
+
+    if result:
+        msg = f"✅️ Data saved to {OUTPUT_FILEPATH}."
+        print(msg)
+        log_chat_transcript("DATA SAVED", msg)
 
     show_timer(prog_start_time)
     log_chat_transcript("End Program Run Time", get_time(prog_start_time) + f"RUN ID: {run_id}")

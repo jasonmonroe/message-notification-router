@@ -44,7 +44,7 @@ def run_message_reviewer_pipeline(data_handler) -> list | None:
             response = chat_model.get_response(prompt, row.Index) # response is a list
             log_chat_transcript("LLM_RESPONSE", response)
            
-            if not response:
+            if not response or hasattr(response, "error"):
                 print(f"\n🚨 No response was given due to an error.  Breaking loop at index {row.Index}.\n")
                 break
 

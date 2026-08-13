@@ -28,7 +28,7 @@ from src.utils import log_chat_transcript, show_banner
 
 class DataHandler:
     def __init__(self, args: dict) -> None:
-        self._use_sample = args.get("sample")
+        self._use_sample = args.get("sample", False)
         
         # Text 
         self.business_accounts = None
@@ -60,7 +60,7 @@ class DataHandler:
             print("Sample data is now being shuffled...")
             self.messages = self.messages.sample(frac=1).reset_index(drop=True)
 
-    def save_output(self, csv_rows: list) -> None: 
+    def save_output(self, csv_rows: list) -> int: 
         """
         Updates the existing CSV file by matching message_id using a list of lists.
         Preserves unprocessed placeholder rows and updates existing ones.
@@ -90,12 +90,16 @@ class DataHandler:
                 existing_data[msg_id] = row_dict
 
         # Write all rows back out cleanly
+        rows_updated = 0
         with open(OUTPUT_FILEPATH, "w", newline="", encoding="utf-8") as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=CSV_HEADER_COLS)
             writer.writeheader()
 
             for msg_id, row_data in existing_data.items():
                 writer.writerow(row_data)
+                rows_updated += 1
+
+        return rows_updated
 
     def describe(self) -> None:
         sample_text = "Sample" if self._use_sample else ""

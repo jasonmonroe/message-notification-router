@@ -211,7 +211,7 @@ class ContextAssembler:
             base_model = whisper.load_model("base")
             
             # Transcribe the audio file path
-            result = base_model.transcribe(audio_filepath)
+            result = base_model.transcribe(audio_filepath, fp16=False)
             
             return "Audio Transcription: " + result["text"].strip()
         
