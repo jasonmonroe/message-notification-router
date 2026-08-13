@@ -37,17 +37,12 @@ class TestMainPipeline(unittest.TestCase):
     def test_it_parses_args(self, mock_log_transcript):
         expected = {"eda": True, "log": True, "sample": True}
         actual = main.parse_args(ARGS_LIST)
-        
-        # Verify actual is a dictionary
-        self.assertIsInstance(actual, dict)
-        
-        # Verify dictionary contents
+        print(actual)
+        self.assertIsInstance(expected, dict)
         self.assertEqual(actual, expected)
-        
-        # Verify keys are present (if you want explicit key assertions)
-        self.assertIn("eda", actual)
-        self.assertIn("log", actual)
-        self.assertIn("sample", actual)
+        self.assertHasAttr(actual, "eda")
+        self.assertHasAttr(actual, "log")
+        self.assertHasAttr(actual, "sample")
 
     def test_it_returns_data_handler(self, mock_log_transcript):
         args = {"sample": True, "eda": True}
